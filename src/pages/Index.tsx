@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Progress } from '@/components/ui/progress';
 import Icon from '@/components/ui/icon';
 import ReviewForm from '@/components/ReviewForm';
+import { useState, useEffect } from 'react';
 import SupportTicketForm from '@/components/SupportTicketForm';
 import AdRenderer from '@/components/AdRenderer';
 import QRCode from 'qrcode';
@@ -26,11 +27,13 @@ export default function Index() {
   const [codeType, setCodeType] = useState<'qr' | 'barcode' | 'datamatrix' | 'aztec'>('qr');
   const [qrColor, setQrColor] = useState('#000000');
   const [qrBgColor, setQrBgColor] = useState('#FFFFFF');
+  const [qrColorType, setQrColorType] = useState<'solid' | 'gradient'>('solid');
+  const [qrGradientStart, setQrGradientStart] = useState('#000000');
+  const [qrGradientEnd, setQrGradientEnd] = useState('#0000FF');
   const [qrSize, setQrSize] = useState([256]);
   const [errorCorrection, setErrorCorrection] = useState('M');
   const [qrStyle, setQrStyle] = useState('square');
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [contactEmail, setContactEmail] = useState('');
@@ -39,13 +42,29 @@ export default function Index() {
   const [wifiSecurity, setWifiSecurity] = useState('WPA');
   const [barcodeFormat, setBarcodeFormat] = useState('CODE128');
   const [generatedCodeUrl, setGeneratedCodeUrl] = useState<string | null>(null);
+  const [approvedReviews, setApprovedReviews] = useState<any[]>([]);
+
+  // Load approved reviews
+  useEffect(() => {
+    const loadApprovedReviews = () => {
+      const approved = JSON.parse(localStorage.getItem('approved_reviews') || '[]');
+      setApprovedReviews(approved);
+    };
+
+    loadApprovedReviews();
+    // Listen for storage changes to update reviews in real-time
+    const handleStorageChange = () => loadApprovedReviews();
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
   const [batchText, setBatchText] = useState('');
   const [batchProgress, setBatchProgress] = useState(0);
   const [batchCodes, setBatchCodes] = useState<string[]>([]);
   const [isGeneratingBatch, setIsGeneratingBatch] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   // Яндекс.Метрика
   useEffect(() => {
@@ -88,28 +107,106 @@ export default function Index() {
       let codeDataUrl = '';
       
       switch (codeType) {
-        case 'qr':
-          if (logoPreview) {
-            // QR с логотипом
-            const qrWithLogo = new QRCodeWithLogo({
-              content: codeText,
-              width: qrSize[0],
-              logo: {
-                src: logoPreview,
-                logoRadius: 8,
-                logoSize: 0.15,
-                borderRadius: 8,
-                borderSize: 0.05,
-              },
-              nodeCanvas: canvasRef.current,
-              correctLevel: QRCodeWithLogo.CorrectLevel[errorCorrection as keyof typeof QRCodeWithLogo.CorrectLevel],
-              dotScale: qrStyle === 'circle' ? 0.8 : qrStyle === 'rounded' ? 0.9 : 1,
-            });
+        case 'qr': {
+          const size = qrSize[0];
+          
+          if (qrColorType === 'gradient' || qrStyle !== 'square') {
+            // Custom rendering for gradient or styled QR codes
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
             
-            const result = await qrWithLogo.getCanvas();
-            codeDataUrl = result.toDataURL();
+            if (ctx) {
+              // Generate base QR code data
+              const baseQR = await QRCode.toDataURL(codeText, {
+                width: size,
+                margin: 2,
+                color: {
+                  dark: '#000000',
+                  light: qrBgColor,
+                },
+                errorCorrectionLevel: errorCorrection as any,
+              });
+              
+              // Load base QR image
+              const img = new Image();
+              await new Promise((resolve) => {
+                img.onload = resolve;
+                img.src = baseQR;
+              });
+              
+              // Draw background
+              ctx.fillStyle = qrBgColor;
+              ctx.fillRect(0, 0, size, size);
+              
+              // Get pixel data to identify modules
+              const tempCanvas = document.createElement('canvas');
+              tempCanvas.width = size;
+              tempCanvas.height = size;
+              const tempCtx = tempCanvas.getContext('2d')!;
+              tempCtx.drawImage(img, 0, 0);
+              const imageData = tempCtx.getImageData(0, 0, size, size);
+              
+              // Set up color (gradient or solid)
+              if (qrColorType === 'gradient') {
+                const gradient = ctx.createLinearGradient(0, 0, size, size);
+                gradient.addColorStop(0, qrGradientStart);
+                gradient.addColorStop(1, qrGradientEnd);
+                ctx.fillStyle = gradient;
+              } else {
+                ctx.fillStyle = qrColor;
+              }
+              
+              // Draw styled modules
+              const moduleSize = Math.ceil(size / 33); // Approximate module size
+              for (let y = 0; y < size; y += moduleSize) {
+                for (let x = 0; x < size; x += moduleSize) {
+                  // Check if this area should be dark
+                  let shouldFill = false;
+                  for (let dy = 0; dy < moduleSize && !shouldFill; dy++) {
+                    for (let dx = 0; dx < moduleSize && !shouldFill; dx++) {
+                      const pixelY = Math.min(y + dy, size - 1);
+                      const pixelX = Math.min(x + dx, size - 1);
+                      const pixel = (pixelY * size + pixelX) * 4;
+                      if (imageData.data[pixel] < 128) { // Dark pixel
+                        shouldFill = true;
+                      }
+                    }
+                  }
+                  
+                  if (shouldFill) {
+                    if (qrStyle === 'circle') {
+                      ctx.beginPath();
+                      ctx.arc(x + moduleSize/2, y + moduleSize/2, moduleSize/2 * 0.8, 0, Math.PI * 2);
+                      ctx.fill();
+                    } else if (qrStyle === 'rounded') {
+                      const radius = moduleSize * 0.3;
+                      ctx.beginPath();
+                      ctx.roundRect(x + 1, y + 1, moduleSize - 2, moduleSize - 2, radius);
+                      ctx.fill();
+                    } else {
+                      ctx.fillRect(x, y, moduleSize, moduleSize);
+                    }
+                  }
+                }
+              }
+              
+              codeDataUrl = canvas.toDataURL('image/png');
+            } else {
+              // Fallback
+              codeDataUrl = await QRCode.toDataURL(codeText, {
+                width: qrSize[0],
+                margin: 2,
+                color: {
+                  dark: qrColorType === 'gradient' ? qrGradientStart : qrColor,
+                  light: qrBgColor,
+                },
+                errorCorrectionLevel: errorCorrection as any,
+              });
+            }
           } else {
-            // Обычный QR
+            // Regular QR code
             codeDataUrl = await QRCode.toDataURL(codeText, {
               width: qrSize[0],
               margin: 2,
@@ -121,6 +218,7 @@ export default function Index() {
             });
           }
           break;
+        }
           
         case 'barcode':
           if (canvasRef.current) {
@@ -305,7 +403,7 @@ export default function Index() {
     } else {
       setGeneratedCodeUrl(null);
     }
-  }, [codeText, codeType, qrColor, qrBgColor, qrSize, errorCorrection, barcodeFormat, qrStyle, logoPreview]);
+  }, [codeText, codeType, qrColor, qrBgColor, qrSize, errorCorrection, barcodeFormat, qrStyle, qrColorType, qrGradientStart, qrGradientEnd]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50">
@@ -578,62 +676,167 @@ export default function Index() {
                   
                   {/* Colors */}
                   <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <span className="text-sm font-medium">Цвет кода</span>
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="color"
-                            value={qrColor}
-                            onChange={(e) => setQrColor(e.target.value)}
-                            className="w-10 h-10 rounded border cursor-pointer"
-                          />
-                          <Input 
-                            value={qrColor} 
-                            onChange={(e) => setQrColor(e.target.value)}
-                            className="text-xs"
-                          />
-                        </div>
-                        {/* Предустановленные цвета */}
-                        <div className="flex space-x-1">
-                          {['#000000', '#FF0000', '#0000FF', '#008000', '#800080'].map(color => (
-                            <button
-                              key={color}
-                              className="w-6 h-6 rounded border"
-                              style={{ backgroundColor: color }}
-                              onClick={() => setQrColor(color)}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <span className="text-sm font-medium">Цвет фона</span>
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="color"
-                            value={qrBgColor}
-                            onChange={(e) => setQrBgColor(e.target.value)}
-                            className="w-10 h-10 rounded border cursor-pointer"
-                          />
-                          <Input 
-                            value={qrBgColor} 
-                            onChange={(e) => setQrBgColor(e.target.value)}
-                            className="text-xs"
-                          />
-                        </div>
-                        <div className="flex space-x-1">
-                          {['#FFFFFF', '#F0F0F0', '#FFFF99', '#FFE4E1', '#E0E0FF'].map(color => (
-                            <button
-                              key={color}
-                              className="w-6 h-6 rounded border"
-                              style={{ backgroundColor: color }}
-                              onClick={() => setQrBgColor(color)}
-                            />
-                          ))}
-                        </div>
+                    {/* Color Type Selection */}
+                    <div className="space-y-2">
+                      <span className="text-sm font-medium">Тип окраски</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          size="sm"
+                          variant={qrColorType === 'solid' ? "default" : "outline"}
+                          onClick={() => setQrColorType('solid')}
+                        >
+                          Однотонный
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={qrColorType === 'gradient' ? "default" : "outline"}
+                          onClick={() => setQrColorType('gradient')}
+                        >
+                          Градиент
+                        </Button>
                       </div>
                     </div>
+
+                    {qrColorType === 'solid' ? (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <span className="text-sm font-medium">Цвет кода</span>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="color"
+                              value={qrColor}
+                              onChange={(e) => setQrColor(e.target.value)}
+                              className="w-10 h-10 rounded border cursor-pointer"
+                            />
+                            <Input 
+                              value={qrColor} 
+                              onChange={(e) => setQrColor(e.target.value)}
+                              className="text-xs"
+                            />
+                          </div>
+                          <div className="flex space-x-1">
+                            {['#000000', '#FF0000', '#0000FF', '#008000', '#800080'].map(color => (
+                              <button
+                                key={color}
+                                className="w-6 h-6 rounded border"
+                                style={{ backgroundColor: color }}
+                                onClick={() => setQrColor(color)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <span className="text-sm font-medium">Цвет фона</span>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="color"
+                              value={qrBgColor}
+                              onChange={(e) => setQrBgColor(e.target.value)}
+                              className="w-10 h-10 rounded border cursor-pointer"
+                            />
+                            <Input 
+                              value={qrBgColor} 
+                              onChange={(e) => setQrBgColor(e.target.value)}
+                              className="text-xs"
+                            />
+                          </div>
+                          <div className="flex space-x-1">
+                            {['#FFFFFF', '#F0F0F0', '#FFFF99', '#FFE4E1', '#E0E0FF'].map(color => (
+                              <button
+                                key={color}
+                                className="w-6 h-6 rounded border"
+                                style={{ backgroundColor: color }}
+                                onClick={() => setQrBgColor(color)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <span className="text-sm font-medium">Начальный цвет</span>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="color"
+                                value={qrGradientStart}
+                                onChange={(e) => setQrGradientStart(e.target.value)}
+                                className="w-10 h-10 rounded border cursor-pointer"
+                              />
+                              <Input 
+                                value={qrGradientStart} 
+                                onChange={(e) => setQrGradientStart(e.target.value)}
+                                className="text-xs"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <span className="text-sm font-medium">Конечный цвет</span>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="color"
+                                value={qrGradientEnd}
+                                onChange={(e) => setQrGradientEnd(e.target.value)}
+                                className="w-10 h-10 rounded border cursor-pointer"
+                              />
+                              <Input 
+                                value={qrGradientEnd} 
+                                onChange={(e) => setQrGradientEnd(e.target.value)}
+                                className="text-xs"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Gradient Presets */}
+                        <div className="space-y-2">
+                          <span className="text-sm font-medium">Готовые градиенты</span>
+                          <div className="grid grid-cols-4 gap-2">
+                            {[
+                              { name: 'Огонь', start: '#FF0000', end: '#FF8C00' },
+                              { name: 'Океан', start: '#0000FF', end: '#00CED1' },
+                              { name: 'Лес', start: '#228B22', end: '#90EE90' },
+                              { name: 'Закат', start: '#800080', end: '#FF69B4' }
+                            ].map(preset => (
+                              <button
+                                key={preset.name}
+                                className="h-8 rounded border text-xs text-white font-medium"
+                                style={{ 
+                                  background: `linear-gradient(45deg, ${preset.start}, ${preset.end})` 
+                                }}
+                                onClick={() => {
+                                  setQrGradientStart(preset.start);
+                                  setQrGradientEnd(preset.end);
+                                }}
+                              >
+                                {preset.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {/* Background Color for Gradient */}
+                        <div className="space-y-2">
+                          <span className="text-sm font-medium">Цвет фона</span>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="color"
+                              value={qrBgColor}
+                              onChange={(e) => setQrBgColor(e.target.value)}
+                              className="w-10 h-10 rounded border cursor-pointer"
+                            />
+                            <Input 
+                              value={qrBgColor} 
+                              onChange={(e) => setQrBgColor(e.target.value)}
+                              className="text-xs"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {codeType === 'qr' && (
@@ -661,38 +864,7 @@ export default function Index() {
                         </div>
                       </div>
 
-                      {/* Logo Upload */}
-                      <div className="space-y-2">
-                        <span className="text-sm font-medium">Логотип в центре</span>
-                        <div className="flex items-center space-x-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => fileInputRef.current?.click()}
-                          >
-                            <Icon name="Upload" size={16} className="mr-2" />
-                            Загрузить логотип
-                          </Button>
-                          {logoPreview && (
-                            <div className="flex items-center space-x-2">
-                              <img src={logoPreview} alt="Logo" className="w-8 h-8 rounded" />
-                              <Button size="sm" variant="ghost" onClick={() => {
-                                setLogoFile(null);
-                                setLogoPreview(null);
-                              }}>
-                                <Icon name="X" size={14} />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          onChange={handleLogoUpload}
-                          className="hidden"
-                        />
-                      </div>
+
 
                       {/* Size & Error Correction */}
                       <div className="grid grid-cols-2 gap-4">
@@ -881,77 +1053,49 @@ export default function Index() {
             <p className="text-xl text-gray-600">Что говорят о нашем сервисе</p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold">
-                    А
-                  </div>
-                  <div className="ml-3">
-                    <div className="font-medium">Анна К.</div>
-                    <div className="flex text-yellow-400">
-                      {[...Array(5)].map((_, i) => (
-                        <Icon key={i} name="Star" size={16} className="fill-current" />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <p className="text-gray-600">
-                  "Отличный сервис! Создала QR-коды для своего кафе с логотипом. 
-                  Качество супер, все работает быстро и бесплатно!"
-                </p>
-                <div className="text-sm text-gray-400 mt-3">2 дня назад</div>
-              </CardContent>
-            </Card>
+          {approvedReviews.length > 0 ? (
+            <div className="grid md:grid-cols-3 gap-8 mb-12">
+              {approvedReviews.map((review) => {
+                const colors = ['bg-purple-500', 'bg-blue-500', 'bg-green-500', 'bg-orange-500', 'bg-pink-500', 'bg-indigo-500'];
+                const colorClass = colors[Math.floor(Math.random() * colors.length)];
+                const initial = review.name.charAt(0).toUpperCase();
+                const timeAgo = new Date(review.date).toLocaleDateString('ru-RU');
 
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                    М
-                  </div>
-                  <div className="ml-3">
-                    <div className="font-medium">Михаил Р.</div>
-                    <div className="flex text-yellow-400">
-                      {[...Array(5)].map((_, i) => (
-                        <Icon key={i} name="Star" size={16} className="fill-current" />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <p className="text-gray-600">
-                  "Пользуюсь batch-генерацией для создания штрих-кодов товаров. 
-                  Сэкономил кучу времени! Функционал просто огонь 🔥"
-                </p>
-                <div className="text-sm text-gray-400 mt-3">1 неделю назад</div>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
-                    Е
-                  </div>
-                  <div className="ml-3">
-                    <div className="font-medium">Елена С.</div>
-                    <div className="flex text-yellow-400">
-                      {[...Array(4)].map((_, i) => (
-                        <Icon key={i} name="Star" size={16} className="fill-current" />
-                      ))}
-                      <Icon name="Star" size={16} />
-                    </div>
-                  </div>
-                </div>
-                <p className="text-gray-600">
-                  "Использую для создания QR с WiFi паролями в офисе. 
-                  Очень удобно и понятно даже для новичков."
-                </p>
-                <div className="text-sm text-gray-400 mt-3">3 дня назад</div>
-              </CardContent>
-            </Card>
-          </div>
+                return (
+                  <Card key={review.id} className="hover:shadow-lg transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-center mb-4">
+                        <div className={`w-12 h-12 ${colorClass} rounded-full flex items-center justify-center text-white font-bold`}>
+                          {initial}
+                        </div>
+                        <div className="ml-3">
+                          <div className="font-medium">{review.name}</div>
+                          <div className="flex text-yellow-400">
+                            {[...Array(review.rating)].map((_, i) => (
+                              <Icon key={i} name="Star" size={16} className="fill-current" />
+                            ))}
+                            {[...Array(5 - review.rating)].map((_, i) => (
+                              <Icon key={i} name="Star" size={16} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-gray-600">
+                        "{review.comment}"
+                      </p>
+                      <div className="text-sm text-gray-400 mt-3">{timeAgo}</div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Icon name="MessageCircle" size={48} className="text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg">Пока нет отзывов</p>
+              <p className="text-gray-400">Будьте первым, кто поделится мнением о нашем сервисе!</p>
+            </div>
+          )}
 
           <div className="text-center">
             <Dialog>
