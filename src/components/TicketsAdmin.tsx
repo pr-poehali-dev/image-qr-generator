@@ -56,6 +56,18 @@ export default function TicketsAdmin() {
     }
   };
 
+  const deleteTicket = (ticketId: string) => {
+    if (!confirm('Вы уверены, что хотите удалить этот тикет? Все сообщения будут потеряны.')) return;
+    
+    const updatedTickets = tickets.filter(ticket => ticket.id !== ticketId);
+    setTickets(updatedTickets);
+    localStorage.setItem('support_tickets', JSON.stringify(updatedTickets));
+    
+    if (selectedTicket && selectedTicket.id === ticketId) {
+      setSelectedTicket(null);
+    }
+  };
+
   const addMessage = (ticketId: string, message: string) => {
     if (!message.trim()) return;
     
@@ -199,17 +211,18 @@ export default function TicketsAdmin() {
                       {new Date(ticket.createdAt).toLocaleDateString('ru-RU')}
                     </TableCell>
                     <TableCell>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => setSelectedTicket(ticket)}
-                          >
-                            <Icon name="MessageSquare" size={14} className="mr-1" />
-                            Открыть
-                          </Button>
-                        </DialogTrigger>
+                      <div className="flex space-x-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => setSelectedTicket(ticket)}
+                            >
+                              <Icon name="MessageSquare" size={14} className="mr-1" />
+                              Открыть
+                            </Button>
+                          </DialogTrigger>
                         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle className="flex items-center space-x-2">
@@ -317,19 +330,40 @@ export default function TicketsAdmin() {
                                   />
                                 </div>
                                 
-                                <Button 
-                                  onClick={() => addMessage(selectedTicket.id, newMessage)}
-                                  disabled={!newMessage.trim()}
-                                  className="gradient-bg"
-                                >
-                                  <Icon name="Send" size={16} className="mr-2" />
-                                  Отправить ответ
-                                </Button>
+                                <div className="flex space-x-2">
+                                  <Button 
+                                    onClick={() => addMessage(selectedTicket.id, newMessage)}
+                                    disabled={!newMessage.trim()}
+                                    className="gradient-bg flex-1"
+                                  >
+                                    <Icon name="Send" size={16} className="mr-2" />
+                                    Отправить ответ
+                                  </Button>
+                                  
+                                  <Button 
+                                    onClick={() => deleteTicket(selectedTicket.id)}
+                                    variant="outline"
+                                    className="text-red-600 hover:text-red-700 hover:border-red-300"
+                                  >
+                                    <Icon name="Trash2" size={16} className="mr-2" />
+                                    Удалить тикет
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           )}
                         </DialogContent>
                       </Dialog>
+                      
+                      <Button 
+                        size="sm"
+                        variant="outline"
+                        onClick={() => deleteTicket(ticket.id)}
+                        className="text-red-600 hover:text-red-700 hover:border-red-300"
+                      >
+                        <Icon name="Trash2" size={14} />
+                      </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

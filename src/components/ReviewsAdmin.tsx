@@ -53,6 +53,27 @@ export default function ReviewsAdmin() {
     setSelectedReview(null);
   };
 
+  const handleDeleteReview = (reviewId: string) => {
+    if (!confirm('Вы уверены, что хотите удалить этот отзыв? Действие необратимо.')) return;
+    
+    const review = reviews.find(r => r.id === reviewId);
+    if (!review) return;
+
+    // Определяем из какого хранилища удалять
+    let storageKey = 'pending_reviews';
+    if (review.status === 'approved') storageKey = 'approved_reviews';
+    if (review.status === 'rejected') storageKey = 'rejected_reviews';
+    
+    // Удаляем из соответствующего хранилища
+    const existingReviews = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const filteredReviews = existingReviews.filter((r: Review) => r.id !== reviewId);
+    localStorage.setItem(storageKey, JSON.stringify(filteredReviews));
+    
+    // Обновляем состояние
+    setReviews(reviews.filter(r => r.id !== reviewId));
+    setSelectedReview(null);
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -196,25 +217,36 @@ export default function ReviewsAdmin() {
                                   <strong>Статус:</strong> {getStatusBadge(selectedReview.status)}
                                 </div>
                                 
-                                {selectedReview.status === 'pending' && (
-                                  <div className="flex space-x-2 pt-4 border-t">
-                                    <Button 
-                                      onClick={() => handleReviewAction(selectedReview.id, 'approve')}
-                                      className="flex-1 bg-green-500 hover:bg-green-600"
-                                    >
-                                      <Icon name="Check" size={16} className="mr-2" />
-                                      Одобрить
-                                    </Button>
-                                    <Button 
-                                      onClick={() => handleReviewAction(selectedReview.id, 'reject')}
-                                      variant="destructive"
-                                      className="flex-1"
-                                    >
-                                      <Icon name="X" size={16} className="mr-2" />
-                                      Отклонить
-                                    </Button>
-                                  </div>
-                                )}
+                                <div className="flex space-x-2 pt-4 border-t">
+                                  {selectedReview.status === 'pending' && (
+                                    <>
+                                      <Button 
+                                        onClick={() => handleReviewAction(selectedReview.id, 'approve')}
+                                        className="flex-1 bg-green-500 hover:bg-green-600"
+                                      >
+                                        <Icon name="Check" size={16} className="mr-2" />
+                                        Одобрить
+                                      </Button>
+                                      <Button 
+                                        onClick={() => handleReviewAction(selectedReview.id, 'reject')}
+                                        variant="destructive"
+                                        className="flex-1"
+                                      >
+                                        <Icon name="X" size={16} className="mr-2" />
+                                        Отклонить
+                                      </Button>
+                                    </>
+                                  )}
+                                  
+                                  <Button 
+                                    onClick={() => handleDeleteReview(selectedReview.id)}
+                                    variant="outline"
+                                    className="text-red-600 hover:text-red-700 hover:border-red-300"
+                                  >
+                                    <Icon name="Trash2" size={16} className="mr-2" />
+                                    Удалить навсегда
+                                  </Button>
+                                </div>
                               </div>
                             )}
                           </DialogContent>
@@ -238,6 +270,15 @@ export default function ReviewsAdmin() {
                             </Button>
                           </>
                         )}
+                        
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteReview(review.id)}
+                          className="text-red-600 hover:text-red-700 hover:border-red-300"
+                        >
+                          <Icon name="Trash2" size={14} />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

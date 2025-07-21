@@ -18,6 +18,7 @@ export default function Admin() {
   const [sessionTimeout, setSessionTimeout] = useState<NodeJS.Timeout | null>(null);
   const [adCode, setAdCode] = useState('');
   const [adPosition, setAdPosition] = useState('header');
+  const [adPlacements, setAdPlacements] = useState<{[key: string]: string}>({});
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordChangeError, setPasswordChangeError] = useState('');
@@ -42,6 +43,10 @@ export default function Admin() {
         localStorage.removeItem('admin_session');
       }
     }
+
+    // Загружаем размещения рекламы
+    const savedPlacements = JSON.parse(localStorage.getItem('ad_placements') || '{}');
+    setAdPlacements(savedPlacements);
 
     return () => {
       if (sessionTimeout) {
@@ -113,8 +118,34 @@ export default function Admin() {
   ];
 
   const handleAdSave = () => {
-    alert(`Реклама сохранена для позиции: ${adPosition}`);
+    if (!adCode.trim()) {
+      alert('Введите HTML код рекламы');
+      return;
+    }
+
+    // Сохраняем размещение рекламы
+    const updatedPlacements = { ...adPlacements, [adPosition]: adCode };
+    setAdPlacements(updatedPlacements);
+    localStorage.setItem('ad_placements', JSON.stringify(updatedPlacements));
+    
+    // Обновляем статус позиции
+    const updatedPositions = adPositions.map(pos => 
+      pos.id === adPosition ? { ...pos, active: true } : pos
+    );
+    
+    alert(`Реклама успешно размещена для позиции: ${adPosition}`);
     setAdCode('');
+  };
+
+  const handleRemoveAd = (positionId: string) => {
+    if (!confirm('Удалить рекламу с этой позиции?')) return;
+    
+    const updatedPlacements = { ...adPlacements };
+    delete updatedPlacements[positionId];
+    setAdPlacements(updatedPlacements);
+    localStorage.setItem('ad_placements', JSON.stringify(updatedPlacements));
+    
+    alert('Реклама удалена');
   };
 
   const handleYandexMetricaSave = () => {
@@ -344,25 +375,56 @@ export default function Admin() {
                     <select 
                       className="w-full p-2 border rounded"
                       value={adPosition}
-                      onChange={(e) => setAdPosition(e.target.value)}
+                      onChange={(e) => {
+                        setAdPosition(e.target.value);
+                        // Загружаем существующий код для редактирования
+                        if (adPlacements[e.target.value]) {
+                          setAdCode(adPlacements[e.target.value]);
+                        } else {
+                          setAdCode('');
+                        }
+                      }}
                     >
                       {adPositions.map(pos => (
                         <option key={pos.id} value={pos.id}>
-                          {pos.name} ({pos.size})
+                          {pos.name} ({pos.size}) {adPlacements[pos.id] ? '✅' : '⭕'}
                         </option>
                       ))}
                     </select>
+                  </div>
+                  
+                  <div className="flex items-end">
+                    {adPlacements[adPosition] && (
+                      <Alert className="text-sm">
+                        <Icon name="Info" size={14} />
+                        <AlertDescription>
+                          На этой позиции уже есть реклама. Новый код заменит существующий.
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
                 </div>
                 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">HTML код рекламы</label>
                   <Textarea 
-                    placeholder="Вставьте HTML код баннера (Google AdSense, Яндекс.Директ и др.)"
+                    placeholder={`Вставьте HTML код баннера для позиции "${adPositions.find(p => p.id === adPosition)?.name}"
+
+Примеры кода:
+• Google AdSense: <script async src="..."></script>
+• Яндекс.Директ: <!-- Yandex.RTB -->
+• Прямой HTML: <div><img src="banner.jpg" /></div>
+• JavaScript: <script>console.log('ad loaded');</script>
+
+Код будет отображен как есть на сайте.`}
                     value={adCode}
                     onChange={(e) => setAdCode(e.target.value)}
-                    rows={8}
+                    rows={10}
+                    className="font-mono text-sm"
                   />
+                  <div className="text-xs text-gray-500">
+                    Размер баннера для выбранной позиции: {adPositions.find(p => p.id === adPosition)?.size}
+                  </div>
                 </div>
                 
                 <Button onClick={handleAdSave} className="gradient-bg">
@@ -387,15 +449,44 @@ export default function Admin() {
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Badge variant={position.active ? "default" : "secondary"}>
-                          {position.active ? "Активна" : "Неактивна"}
+                        <Badge variant={adPlacements[position.id] ? "default" : "secondary"}>
+                          {adPlacements[position.id] ? "Активна" : "Неактивна"}
                         </Badge>
-                        <Button size="sm" variant="outline">
-                          <Icon name="Edit" size={14} />
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <Icon name="Trash2" size={14} />
-                        </Button>
+                        
+                        {adPlacements[position.id] && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              setAdPosition(position.id);
+                              setAdCode(adPlacements[position.id] || '');
+                            }}
+                          >
+                            <Icon name="Edit" size={14} />
+                          </Button>
+                        )}
+                        
+                        {adPlacements[position.id] && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleRemoveAd(position.id)}
+                          >
+                            <Icon name="Trash2" size={14} />
+                          </Button>
+                        )}
+                        
+                        {!adPlacements[position.id] && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setAdPosition(position.id)}
+                            className="text-green-600 hover:text-green-700"
+                          >
+                            <Icon name="Plus" size={14} />
+                            Добавить
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}

@@ -13,6 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import Icon from '@/components/ui/icon';
 import ReviewForm from '@/components/ReviewForm';
 import SupportTicketForm from '@/components/SupportTicketForm';
+import AdRenderer from '@/components/AdRenderer';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
 // @ts-ignore
@@ -319,8 +320,8 @@ export default function Index() {
           </div>
           
           {/* Ad Space - Header */}
-          <div className="hidden md:block w-80 h-12 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-sm text-gray-500">
-            📢 Рекламное место 728x90
+          <div className="hidden md:block w-80 h-12 flex items-center justify-center">
+            <AdRenderer position="header" className="max-w-full max-h-full" />
           </div>
         </div>
       </header>
@@ -356,8 +357,8 @@ export default function Index() {
           </div>
 
           {/* Ad Space - Below Hero */}
-          <div className="w-full max-w-2xl mx-auto h-20 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-sm text-gray-500 mb-8">
-            📢 Рекламное место 728x90
+          <div className="w-full max-w-2xl mx-auto h-20 flex items-center justify-center mb-8">
+            <AdRenderer position="hero" className="w-full max-h-full" />
           </div>
         </div>
       </section>
@@ -813,8 +814,8 @@ export default function Index() {
               {/* Ad Space - Sidebar */}
               <Card>
                 <CardContent className="p-6">
-                  <div className="w-full h-64 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-sm text-gray-500">
-                    📢 Рекламное место 300x250
+                  <div className="w-full h-64 flex items-center justify-center">
+                    <AdRenderer position="sidebar" className="w-full max-h-full" />
                   </div>
                 </CardContent>
               </Card>
@@ -866,8 +867,8 @@ export default function Index() {
       {/* Ad Space - Before Footer */}
       <section className="py-8 px-4">
         <div className="container mx-auto">
-          <div className="w-full h-24 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-sm text-gray-500">
-            📢 Рекламное место 728x90
+          <div className="w-full h-24 flex items-center justify-center">
+            <AdRenderer position="footer" className="w-full max-h-full" />
           </div>
         </div>
       </section>
