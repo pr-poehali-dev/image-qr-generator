@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,12 +7,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import Icon from '@/components/ui/icon';
+import QRCode from 'qrcode';
 
 export default function Index() {
   const [dragActive, setDragActive] = useState(false);
   const [qrText, setQrText] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('free');
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [qrColor, setQrColor] = useState('#000000');
+  const [qrBgColor, setQrBgColor] = useState('#FFFFFF');
+  const [qrSize, setQrSize] = useState([256]);
+  const [showPayment, setShowPayment] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -28,8 +37,91 @@ export default function Index() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    // Handle file drop logic here
+    
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      handleFile(files[0]);
+    }
   };
+
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFile(file);
+    }
+  };
+
+  const handleFile = (file: File) => {
+    // Check file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Файл слишком большой! Максимальный размер 5MB.');
+      return;
+    }
+
+    // Check file type
+    if (!file.type.match(/^image\/(png|jpe?g|webp)$/)) {
+      alert('Неподдерживаемый формат! Используйте PNG, JPG или WEBP.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setUploadedImage(result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const generateQRCode = async () => {
+    if (!qrText) {
+      alert('Введите содержимое для QR-кода');
+      return;
+    }
+
+    try {
+      const qrDataUrl = await QRCode.toDataURL(qrText, {
+        width: qrSize[0],
+        margin: 2,
+        color: {
+          dark: qrColor,
+          light: qrBgColor,
+        },
+        errorCorrectionLevel: 'M',
+      });
+      setQrCodeUrl(qrDataUrl);
+    } catch (error) {
+      console.error('Ошибка генерации QR-кода:', error);
+      alert('Ошибка генерации QR-кода');
+    }
+  };
+
+  const downloadQRCode = () => {
+    if (!qrCodeUrl) return;
+    
+    const link = document.createElement('a');
+    link.download = 'qr-code.png';
+    link.href = qrCodeUrl;
+    link.click();
+  };
+
+  const handlePayment = (plan: string) => {
+    setSelectedPlan(plan);
+    setShowPayment(true);
+  };
+
+  // Auto-generate QR when text changes
+  useEffect(() => {
+    if (qrText) {
+      const timeout = setTimeout(generateQRCode, 500);
+      return () => clearTimeout(timeout);
+    } else {
+      setQrCodeUrl(null);
+    }
+  }, [qrText, qrColor, qrBgColor, qrSize]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50">
@@ -95,22 +187,53 @@ export default function Index() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div
-                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
-                      dragActive 
-                        ? 'border-purple-500 bg-purple-50' 
-                        : 'border-gray-300 hover:border-purple-400'
-                    }`}
-                    onDragEnter={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDragOver={handleDrag}
-                    onDrop={handleDrop}
-                  >
-                    <Icon name="ImageUp" size={48} className="mx-auto mb-4 text-gray-400" />
-                    <p className="text-lg mb-2">Перетащите изображение сюда</p>
-                    <p className="text-sm text-gray-500 mb-4">или</p>
-                    <Button>Выбрать файл</Button>
-                  </div>
+                  {uploadedImage ? (
+                    <div className="space-y-4">
+                      <div className="relative w-64 h-64 mx-auto border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
+                        <img 
+                          src={uploadedImage} 
+                          alt="Uploaded" 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex space-x-2 justify-center">
+                        <Button variant="outline" onClick={() => setUploadedImage(null)}>
+                          <Icon name="X" size={16} className="mr-1" />
+                          Удалить
+                        </Button>
+                        <Button onClick={handleFileSelect}>
+                          <Icon name="Upload" size={16} className="mr-1" />
+                          Заменить
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer ${
+                        dragActive 
+                          ? 'border-purple-500 bg-purple-50' 
+                          : 'border-gray-300 hover:border-purple-400'
+                      }`}
+                      onDragEnter={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDragOver={handleDrag}
+                      onDrop={handleDrop}
+                      onClick={handleFileSelect}
+                    >
+                      <Icon name="ImageUp" size={48} className="mx-auto mb-4 text-gray-400" />
+                      <p className="text-lg mb-2">Перетащите изображение сюда</p>
+                      <p className="text-sm text-gray-500 mb-4">или</p>
+                      <Button>Выбрать файл</Button>
+                    </div>
+                  )}
+                  
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
                 </CardContent>
               </Card>
 
@@ -170,20 +293,51 @@ export default function Index() {
                     </div>
                   </div>
                   
-                  <div className="space-y-2">
-                    <span className="text-sm font-medium">Цвета</span>
-                    <div className="flex space-x-2">
-                      <div className="w-8 h-8 rounded bg-black border cursor-pointer"></div>
-                      <div className="w-8 h-8 rounded gradient-bg border cursor-pointer"></div>
-                      <div className="w-8 h-8 rounded bg-blue-500 border cursor-pointer"></div>
-                      <div className="w-8 h-8 rounded bg-red-500 border cursor-pointer"></div>
-                      <div className="w-8 h-8 rounded bg-green-500 border cursor-pointer"></div>
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <span className="text-sm font-medium">Цвет QR-кода</span>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="color"
+                          value={qrColor}
+                          onChange={(e) => setQrColor(e.target.value)}
+                          className="w-8 h-8 rounded border cursor-pointer"
+                        />
+                        <Input 
+                          value={qrColor} 
+                          onChange={(e) => setQrColor(e.target.value)}
+                          className="w-20 text-xs"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <span className="text-sm font-medium">Цвет фона</span>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="color"
+                          value={qrBgColor}
+                          onChange={(e) => setQrBgColor(e.target.value)}
+                          className="w-8 h-8 rounded border cursor-pointer"
+                        />
+                        <Input 
+                          value={qrBgColor} 
+                          onChange={(e) => setQrBgColor(e.target.value)}
+                          className="w-20 text-xs"
+                        />
+                      </div>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <span className="text-sm font-medium">Уровень коррекции</span>
-                    <Slider defaultValue={[30]} max={100} step={1} />
+                    <span className="text-sm font-medium">Размер QR: {qrSize[0]}px</span>
+                    <Slider 
+                      value={qrSize} 
+                      onValueChange={setQrSize}
+                      min={128}
+                      max={1024} 
+                      step={32}
+                    />
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -198,17 +352,47 @@ export default function Index() {
             <div className="space-y-8">
               <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
                 <CardContent className="p-8 text-center">
-                  <div className="w-64 h-64 mx-auto mb-6 bg-white rounded-lg shadow-lg flex items-center justify-center">
-                    <div className="w-48 h-48 border-2 border-dashed border-gray-300 rounded flex items-center justify-center">
-                      <Icon name="QrCode" size={64} className="text-gray-400" />
-                    </div>
+                  <div className="w-64 h-64 mx-auto mb-6 bg-white rounded-lg shadow-lg flex items-center justify-center overflow-hidden">
+                    {qrCodeUrl ? (
+                      <img 
+                        src={qrCodeUrl} 
+                        alt="Generated QR Code" 
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    ) : (
+                      <div className="w-48 h-48 border-2 border-dashed border-gray-300 rounded flex items-center justify-center">
+                        <Icon name="QrCode" size={64} className="text-gray-400" />
+                      </div>
+                    )}
                   </div>
-                  <h3 className="text-xl font-bold mb-2">Предварительный просмотр</h3>
-                  <p className="text-gray-600 mb-4">QR-код появится здесь после заполнения полей</p>
-                  <Button size="lg" className="gradient-bg">
-                    <Icon name="Download" size={20} className="mr-2" />
-                    Скачать QR-код
-                  </Button>
+                  <h3 className="text-xl font-bold mb-2">
+                    {qrCodeUrl ? 'QR-код готов!' : 'Предварительный просмотр'}
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    {qrCodeUrl ? 'Нажмите кнопку ниже для скачивания' : 'QR-код появится здесь после заполнения полей'}
+                  </p>
+                  <div className="space-y-2">
+                    <Button 
+                      size="lg" 
+                      className="gradient-bg w-full"
+                      onClick={downloadQRCode}
+                      disabled={!qrCodeUrl}
+                    >
+                      <Icon name="Download" size={20} className="mr-2" />
+                      Скачать QR-код
+                    </Button>
+                    {qrCodeUrl && (
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={generateQRCode}
+                      >
+                        <Icon name="RefreshCw" size={16} className="mr-2" />
+                        Перегенерировать
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -261,7 +445,7 @@ export default function Index() {
               <CardHeader>
                 <CardTitle>Бесплатный</CardTitle>
                 <CardDescription>Для персонального использования</CardDescription>
-                <div className="text-3xl font-bold">$0</div>
+                <div className="text-3xl font-bold">0 ₽</div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-2">
@@ -293,7 +477,7 @@ export default function Index() {
               <CardHeader>
                 <CardTitle>Pro</CardTitle>
                 <CardDescription>Для профессионалов</CardDescription>
-                <div className="text-3xl font-bold">$9.99<span className="text-sm font-normal">/мес</span></div>
+                <div className="text-3xl font-bold">799 ₽<span className="text-sm font-normal">/мес</span></div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-2">
@@ -314,7 +498,7 @@ export default function Index() {
                 </div>
                 <Button 
                   className="w-full gradient-bg"
-                  onClick={() => setSelectedPlan('pro')}
+                  onClick={() => handlePayment('pro')}
                 >
                   Выбрать Pro
                 </Button>
@@ -325,7 +509,7 @@ export default function Index() {
               <CardHeader>
                 <CardTitle>Enterprise</CardTitle>
                 <CardDescription>Для команд и бизнеса</CardDescription>
-                <div className="text-3xl font-bold">$29.99<span className="text-sm font-normal">/мес</span></div>
+                <div className="text-3xl font-bold">1990 ₽<span className="text-sm font-normal">/мес</span></div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-2">
@@ -347,9 +531,9 @@ export default function Index() {
                 <Button 
                   variant="outline" 
                   className="w-full"
-                  onClick={() => setSelectedPlan('enterprise')}
+                  onClick={() => handlePayment('enterprise')}
                 >
-                  Связаться с нами
+                  Выбрать Enterprise
                 </Button>
               </CardContent>
             </Card>
@@ -455,6 +639,74 @@ export default function Index() {
           </div>
         </div>
       </footer>
+
+      {/* Payment Dialog */}
+      <Dialog open={showPayment} onOpenChange={setShowPayment}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Оплата тарифа {selectedPlan === 'pro' ? 'Pro' : 'Enterprise'}</DialogTitle>
+            <DialogDescription>
+              Выберите способ оплаты для активации подписки
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 border rounded-lg bg-purple-50">
+              <h4 className="font-medium mb-2">Выбранный план: {selectedPlan === 'pro' ? 'Pro' : 'Enterprise'}</h4>
+              <p className="text-sm text-gray-600 mb-2">
+                Стоимость: {selectedPlan === 'pro' ? '799 ₽/мес' : '1990 ₽/мес'}
+              </p>
+              <div className="text-xs text-gray-500">
+                {selectedPlan === 'pro' ? 
+                  '• Неограниченные QR-коды\n• Динамические QR-коды\n• Аналитика сканирований\n• Без водяных знаков' :
+                  '• Все функции Pro\n• White Label\n• API доступ\n• Кастомный домен'
+                }
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <Button 
+                className="w-full gradient-bg"
+                onClick={() => {
+                  alert(`Переход к оплате ${selectedPlan === 'pro' ? '799 ₽' : '1990 ₽'} через ЮMoney/Сбербанк`);
+                  setShowPayment(false);
+                }}
+              >
+                <Icon name="CreditCard" size={20} className="mr-2" />
+                Оплатить картой
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => {
+                  alert(`Переход к оплате ${selectedPlan === 'pro' ? '799 ₽' : '1990 ₽'} через СБП`);
+                  setShowPayment(false);
+                }}
+              >
+                <Icon name="Smartphone" size={20} className="mr-2" />
+                СБП (Быстрые платежи)
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => {
+                  alert(`Переход к оплате ${selectedPlan === 'pro' ? '799 ₽' : '1990 ₽'} через Qiwi`);
+                  setShowPayment(false);
+                }}
+              >
+                <Icon name="Wallet" size={20} className="mr-2" />
+                Qiwi / ЮMoney
+              </Button>
+            </div>
+            
+            <div className="text-xs text-gray-500 text-center pt-2 border-t">
+              Безопасная оплата через защищенное соединение.<br />
+              Подписка активируется автоматически после оплаты.
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
