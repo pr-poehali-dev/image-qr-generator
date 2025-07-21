@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import Icon from '@/components/ui/icon';
+import ReviewsAdmin from '@/components/ReviewsAdmin';
+import TicketsAdmin from '@/components/TicketsAdmin';
 import Login from './Login';
 
 export default function Admin() {
@@ -204,9 +206,11 @@ export default function Admin() {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="stats" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="stats">Статистика</TabsTrigger>
             <TabsTrigger value="ads">Реклама</TabsTrigger>
+            <TabsTrigger value="reviews">Отзывы</TabsTrigger>
+            <TabsTrigger value="tickets">Тикеты</TabsTrigger>
             <TabsTrigger value="activity">Активность</TabsTrigger>
             <TabsTrigger value="settings">Настройки</TabsTrigger>
           </TabsList>
@@ -440,6 +444,16 @@ export default function Admin() {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Отзывы */}
+          <TabsContent value="reviews" className="space-y-8">
+            <ReviewsAdmin />
+          </TabsContent>
+
+          {/* Тикеты */}
+          <TabsContent value="tickets" className="space-y-8">
+            <TicketsAdmin />
           </TabsContent>
 
           {/* Настройки */}

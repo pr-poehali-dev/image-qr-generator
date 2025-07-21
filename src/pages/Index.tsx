@@ -11,10 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import Icon from '@/components/ui/icon';
+import ReviewForm from '@/components/ReviewForm';
+import SupportTicketForm from '@/components/SupportTicketForm';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
 // @ts-ignore
 import bwip from 'bwip-js';
+// @ts-ignore
+import QRCodeWithLogo from 'qrcode-with-logos';
 
 export default function Index() {
   const [codeText, setCodeText] = useState('');
@@ -26,6 +30,12 @@ export default function Index() {
   const [qrStyle, setQrStyle] = useState('square');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [wifiSSID, setWifiSSID] = useState('');
+  const [wifiPassword, setWifiPassword] = useState('');
+  const [wifiSecurity, setWifiSecurity] = useState('WPA');
   const [barcodeFormat, setBarcodeFormat] = useState('CODE128');
   const [generatedCodeUrl, setGeneratedCodeUrl] = useState<string | null>(null);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
@@ -78,15 +88,37 @@ export default function Index() {
       
       switch (codeType) {
         case 'qr':
-          codeDataUrl = await QRCode.toDataURL(codeText, {
-            width: qrSize[0],
-            margin: 2,
-            color: {
-              dark: qrColor,
-              light: qrBgColor,
-            },
-            errorCorrectionLevel: errorCorrection as any,
-          });
+          if (logoPreview) {
+            // QR с логотипом
+            const qrWithLogo = new QRCodeWithLogo({
+              content: codeText,
+              width: qrSize[0],
+              logo: {
+                src: logoPreview,
+                logoRadius: 8,
+                logoSize: 0.15,
+                borderRadius: 8,
+                borderSize: 0.05,
+              },
+              nodeCanvas: canvasRef.current,
+              correctLevel: QRCodeWithLogo.CorrectLevel[errorCorrection as keyof typeof QRCodeWithLogo.CorrectLevel],
+              dotScale: qrStyle === 'circle' ? 0.8 : qrStyle === 'rounded' ? 0.9 : 1,
+            });
+            
+            const result = await qrWithLogo.getCanvas();
+            codeDataUrl = result.toDataURL();
+          } else {
+            // Обычный QR
+            codeDataUrl = await QRCode.toDataURL(codeText, {
+              width: qrSize[0],
+              margin: 2,
+              color: {
+                dark: qrColor,
+                light: qrBgColor,
+              },
+              errorCorrectionLevel: errorCorrection as any,
+            });
+          }
           break;
           
         case 'barcode':
@@ -241,6 +273,29 @@ export default function Index() {
     });
   };
 
+  // Helper functions for contact and wifi
+  const updateContactVCard = (name: string, phone: string, email: string) => {
+    let vcard = 'BEGIN:VCARD\\nVERSION:3.0\\n';
+    if (name) vcard += `FN:${name}\\n`;
+    if (phone) vcard += `TEL:${phone}\\n`;
+    if (email) vcard += `EMAIL:${email}\\n`;
+    vcard += 'END:VCARD';
+    setCodeText(vcard);
+  };
+
+  const updateWifiString = (ssid: string, password: string, security: string) => {
+    if (!ssid) {
+      setCodeText('');
+      return;
+    }
+    let wifiString = `WIFI:T:${security};S:${ssid};`;
+    if (security !== 'nopass' && password) {
+      wifiString += `P:${password};`;
+    }
+    wifiString += 'H:;;';
+    setCodeText(wifiString);
+  };
+
   // Auto-generate code when parameters change
   useEffect(() => {
     if (codeText) {
@@ -249,7 +304,7 @@ export default function Index() {
     } else {
       setGeneratedCodeUrl(null);
     }
-  }, [codeText, codeType, qrColor, qrBgColor, qrSize, errorCorrection, barcodeFormat, qrStyle]);
+  }, [codeText, codeType, qrColor, qrBgColor, qrSize, errorCorrection, barcodeFormat, qrStyle, logoPreview]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50">
@@ -445,17 +500,65 @@ export default function Index() {
                     </TabsContent>
                     <TabsContent value="contact">
                       <div className="space-y-3">
-                        <Input placeholder="Имя" onChange={(e) => {
-                          // Простой vCard генератор
-                          setCodeText(`BEGIN:VCARD\nVERSION:3.0\nFN:${e.target.value}\nEND:VCARD`);
-                        }} />
+                        <Input 
+                          placeholder="Имя" 
+                          value={contactName}
+                          onChange={(e) => {
+                            setContactName(e.target.value);
+                            updateContactVCard(e.target.value, contactPhone, contactEmail);
+                          }} 
+                        />
+                        <Input 
+                          placeholder="Телефон" 
+                          value={contactPhone}
+                          onChange={(e) => {
+                            setContactPhone(e.target.value);
+                            updateContactVCard(contactName, e.target.value, contactEmail);
+                          }} 
+                        />
+                        <Input 
+                          placeholder="Email" 
+                          type="email"
+                          value={contactEmail}
+                          onChange={(e) => {
+                            setContactEmail(e.target.value);
+                            updateContactVCard(contactName, contactPhone, e.target.value);
+                          }} 
+                        />
                       </div>
                     </TabsContent>
                     <TabsContent value="wifi">
                       <div className="space-y-3">
-                        <Input placeholder="Название WiFi" onChange={(e) => {
-                          setCodeText(`WIFI:T:WPA;S:${e.target.value};P:password;H:;;`);
-                        }} />
+                        <Input 
+                          placeholder="Название WiFi (SSID)" 
+                          value={wifiSSID}
+                          onChange={(e) => {
+                            setWifiSSID(e.target.value);
+                            updateWifiString(e.target.value, wifiPassword, wifiSecurity);
+                          }} 
+                        />
+                        <Input 
+                          placeholder="Пароль WiFi" 
+                          type="password"
+                          value={wifiPassword}
+                          onChange={(e) => {
+                            setWifiPassword(e.target.value);
+                            updateWifiString(wifiSSID, e.target.value, wifiSecurity);
+                          }} 
+                        />
+                        <Select value={wifiSecurity} onValueChange={(value) => {
+                          setWifiSecurity(value);
+                          updateWifiString(wifiSSID, wifiPassword, value);
+                        }}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Тип шифрования" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="WPA">WPA/WPA2</SelectItem>
+                            <SelectItem value="WEP">WEP (устаревший)</SelectItem>
+                            <SelectItem value="nopass">Открытая сеть</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </TabsContent>
                   </Tabs>
@@ -766,6 +869,135 @@ export default function Index() {
           <div className="w-full h-24 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-sm text-gray-500">
             📢 Рекламное место 728x90
           </div>
+        </div>
+      </section>
+
+      {/* Reviews Section */}
+      <section className="py-20 px-4 bg-white">
+        <div className="container mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold mb-4">Отзывы пользователей</h2>
+            <p className="text-xl text-gray-600">Что говорят о нашем сервисе</p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8 mb-12">
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                    А
+                  </div>
+                  <div className="ml-3">
+                    <div className="font-medium">Анна К.</div>
+                    <div className="flex text-yellow-400">
+                      {[...Array(5)].map((_, i) => (
+                        <Icon key={i} name="Star" size={16} className="fill-current" />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-gray-600">
+                  "Отличный сервис! Создала QR-коды для своего кафе с логотипом. 
+                  Качество супер, все работает быстро и бесплатно!"
+                </p>
+                <div className="text-sm text-gray-400 mt-3">2 дня назад</div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                    М
+                  </div>
+                  <div className="ml-3">
+                    <div className="font-medium">Михаил Р.</div>
+                    <div className="flex text-yellow-400">
+                      {[...Array(5)].map((_, i) => (
+                        <Icon key={i} name="Star" size={16} className="fill-current" />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-gray-600">
+                  "Пользуюсь batch-генерацией для создания штрих-кодов товаров. 
+                  Сэкономил кучу времени! Функционал просто огонь 🔥"
+                </p>
+                <div className="text-sm text-gray-400 mt-3">1 неделю назад</div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
+                    Е
+                  </div>
+                  <div className="ml-3">
+                    <div className="font-medium">Елена С.</div>
+                    <div className="flex text-yellow-400">
+                      {[...Array(4)].map((_, i) => (
+                        <Icon key={i} name="Star" size={16} className="fill-current" />
+                      ))}
+                      <Icon name="Star" size={16} />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-gray-600">
+                  "Использую для создания QR с WiFi паролями в офисе. 
+                  Очень удобно и понятно даже для новичков."
+                </p>
+                <div className="text-sm text-gray-400 mt-3">3 дня назад</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="text-center">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="lg" variant="outline">
+                  <Icon name="MessageCircle" size={20} className="mr-2" />
+                  Оставить отзыв
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Поделитесь своим мнением</DialogTitle>
+                  <DialogDescription>
+                    Ваш отзыв поможет нам стать лучше
+                  </DialogDescription>
+                </DialogHeader>
+                <ReviewForm />
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+      </section>
+
+      {/* Support Section */}
+      <section className="py-16 px-4 bg-gray-50">
+        <div className="container mx-auto text-center">
+          <h2 className="text-3xl font-bold mb-4">Нужна помощь?</h2>
+          <p className="text-xl text-gray-600 mb-8">
+            Наша служба поддержки готова помочь вам 24/7
+          </p>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="lg" className="gradient-bg">
+                <Icon name="HeadphonesIcon" size={20} className="mr-2" />
+                Обратиться в поддержку
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Обращение в техподдержку</DialogTitle>
+                <DialogDescription>
+                  Опишите вашу проблему, и мы поможем её решить
+                </DialogDescription>
+              </DialogHeader>
+              <SupportTicketForm />
+            </DialogContent>
+          </Dialog>
         </div>
       </section>
 
