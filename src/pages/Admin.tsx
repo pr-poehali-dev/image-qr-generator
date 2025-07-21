@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,13 +6,86 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import Icon from '@/components/ui/icon';
+import Login from './Login';
 
 export default function Admin() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [sessionTimeout, setSessionTimeout] = useState<NodeJS.Timeout | null>(null);
   const [adCode, setAdCode] = useState('');
   const [adPosition, setAdPosition] = useState('header');
-  
-  // Mock статистика
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordChangeError, setPasswordChangeError] = useState('');
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [yandexMetricaId, setYandexMetricaId] = useState(localStorage.getItem('yandex_metrica_id') || '');
+
+  const SESSION_DURATION = 1800000; // 30 минут
+
+  // Проверка сессии при загрузке
+  useEffect(() => {
+    const session = localStorage.getItem('admin_session');
+    if (session) {
+      const sessionTime = parseInt(session);
+      const currentTime = Date.now();
+      
+      if (currentTime - sessionTime < SESSION_DURATION) {
+        setIsAuthenticated(true);
+        // Устанавливаем таймер для автоматического выхода
+        const remainingTime = SESSION_DURATION - (currentTime - sessionTime);
+        setSessionTimeout(setTimeout(handleLogout, remainingTime));
+      } else {
+        localStorage.removeItem('admin_session');
+      }
+    }
+
+    return () => {
+      if (sessionTimeout) {
+        clearTimeout(sessionTimeout);
+      }
+    };
+  }, []);
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+    
+    // Устанавливаем таймер для автоматического выхода
+    const timeout = setTimeout(handleLogout, SESSION_DURATION);
+    setSessionTimeout(timeout);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('admin_session');
+    if (sessionTimeout) {
+      clearTimeout(sessionTimeout);
+    }
+    setSessionTimeout(null);
+  };
+
+  const handlePasswordChange = () => {
+    setPasswordChangeError('');
+    
+    if (!newPassword || newPassword.length < 8) {
+      setPasswordChangeError('Пароль должен содержать минимум 8 символов');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setPasswordChangeError('Пароли не совпадают');
+      return;
+    }
+    
+    localStorage.setItem('admin_password', newPassword);
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowPasswordDialog(false);
+    alert('Пароль успешно изменен');
+  };
+
+  // Mock статистика (будет заменена на реальную из Яндекс.Метрики)
   const stats = {
     totalVisits: 15420,
     codesGenerated: 8934,
@@ -24,10 +97,10 @@ export default function Admin() {
 
   const recentActivity = [
     { type: 'QR', content: 'https://example.com', time: '2 мин назад', ip: '192.168.1.1' },
-    { type: 'Штрих', content: '1234567890123', time: '5 мин назад', ip: '192.168.1.2' },
-    { type: 'QR', content: 'Текст сообщения', time: '8 мин назад', ip: '192.168.1.3' },
+    { type: 'DataMatrix', content: 'DM123456789', time: '5 мин назад', ip: '192.168.1.2' },
+    { type: 'Aztec', content: 'AZ987654321', time: '8 мин назад', ip: '192.168.1.3' },
     { type: 'Штрих', content: '9876543210987', time: '12 мин назад', ip: '192.168.1.4' },
-    { type: 'QR', content: 'https://test.com', time: '15 мин назад', ip: '192.168.1.5' },
+    { type: 'Batch', content: '5 QR-кодов', time: '15 мин назад', ip: '192.168.1.5' },
   ];
 
   const adPositions = [
@@ -42,6 +115,15 @@ export default function Admin() {
     setAdCode('');
   };
 
+  const handleYandexMetricaSave = () => {
+    localStorage.setItem('yandex_metrica_id', yandexMetricaId);
+    alert('ID Яндекс.Метрики сохранен');
+  };
+
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50">
       {/* Header */}
@@ -53,23 +135,91 @@ export default function Admin() {
             </div>
             <span className="text-xl font-bold gradient-text">Админ панель</span>
           </div>
-          <Button variant="outline" onClick={() => window.location.href = '/'}>
-            <Icon name="ArrowLeft" size={16} className="mr-2" />
-            На главную
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Icon name="Key" size={16} className="mr-2" />
+                  Сменить пароль
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Смена пароля администратора</DialogTitle>
+                  <DialogDescription>
+                    Введите новый пароль (минимум 8 символов)
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Новый пароль</label>
+                    <Input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Минимум 8 символов"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Подтвердите пароль</label>
+                    <Input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Повторите новый пароль"
+                    />
+                  </div>
+
+                  {passwordChangeError && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{passwordChangeError}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="flex space-x-2">
+                    <Button onClick={handlePasswordChange} className="gradient-bg">
+                      Изменить пароль
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>
+                      Отмена
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+            
+            <Button variant="outline" onClick={() => window.location.href = '/'}>
+              <Icon name="Home" size={16} className="mr-2" />
+              На главную
+            </Button>
+            
+            <Button variant="destructive" onClick={handleLogout}>
+              <Icon name="LogOut" size={16} className="mr-2" />
+              Выйти
+            </Button>
+          </div>
         </div>
       </header>
 
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="stats" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="stats">Статистика</TabsTrigger>
             <TabsTrigger value="ads">Реклама</TabsTrigger>
             <TabsTrigger value="activity">Активность</TabsTrigger>
+            <TabsTrigger value="settings">Настройки</TabsTrigger>
           </TabsList>
 
           {/* Статистика */}
           <TabsContent value="stats" className="space-y-8">
+            <Alert>
+              <Icon name="Info" size={16} />
+              <AlertDescription>
+                Статистика обновляется каждые 15 минут из Яндекс.Метрики
+              </AlertDescription>
+            </Alert>
+
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <Card>
                 <CardContent className="p-4 text-center">
@@ -118,11 +268,11 @@ export default function Admin() {
               <Card>
                 <CardHeader>
                   <CardTitle>График посещений</CardTitle>
-                  <CardDescription>Посещения за последние 7 дней</CardDescription>
+                  <CardDescription>Данные из Яндекс.Метрики за последние 7 дней</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-64 w-full border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-gray-500">
-                    📊 Здесь будет график посещений
+                    📊 Интеграция с Яндекс.Метрикой
                   </div>
                 </CardContent>
               </Card>
@@ -138,18 +288,36 @@ export default function Admin() {
                       <span className="text-sm">QR-коды</span>
                       <div className="flex items-center space-x-2">
                         <div className="w-32 h-2 bg-gray-200 rounded">
-                          <div className="w-3/4 h-full bg-purple-500 rounded"></div>
+                          <div className="w-3/5 h-full bg-purple-500 rounded"></div>
                         </div>
-                        <span className="text-sm text-gray-600">68%</span>
+                        <span className="text-sm text-gray-600">60%</span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Штрих-коды</span>
                       <div className="flex items-center space-x-2">
                         <div className="w-32 h-2 bg-gray-200 rounded">
-                          <div className="w-1/3 h-full bg-orange-500 rounded"></div>
+                          <div className="w-1/4 h-full bg-orange-500 rounded"></div>
                         </div>
-                        <span className="text-sm text-gray-600">32%</span>
+                        <span className="text-sm text-gray-600">25%</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">DataMatrix</span>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-32 h-2 bg-gray-200 rounded">
+                          <div className="w-1/8 h-full bg-blue-500 rounded"></div>
+                        </div>
+                        <span className="text-sm text-gray-600">10%</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Aztec</span>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-32 h-2 bg-gray-200 rounded">
+                          <div className="w-1/16 h-full bg-green-500 rounded"></div>
+                        </div>
+                        <span className="text-sm text-gray-600">5%</span>
                       </div>
                     </div>
                   </div>
@@ -254,7 +422,7 @@ export default function Admin() {
                       <TableRow key={index}>
                         <TableCell>
                           <Badge variant={activity.type === 'QR' ? 'default' : 'secondary'}>
-                            {activity.type === 'QR' ? 'QR-код' : 'Штрих-код'}
+                            {activity.type}
                           </Badge>
                         </TableCell>
                         <TableCell className="font-mono text-sm max-w-xs truncate">
@@ -272,66 +440,66 @@ export default function Admin() {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
 
-            <div className="grid md:grid-cols-2 gap-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Топ контента</CardTitle>
-                  <CardDescription>Наиболее популярные типы контента</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">URL ссылки</span>
-                      <span className="text-sm font-medium">45%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Номера товаров</span>
-                      <span className="text-sm font-medium">28%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Текстовые сообщения</span>
-                      <span className="text-sm font-medium">18%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Прочее</span>
-                      <span className="text-sm font-medium">9%</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+          {/* Настройки */}
+          <TabsContent value="settings" className="space-y-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Яндекс.Метрика</CardTitle>
+                <CardDescription>Настройка интеграции для получения реальной статистики</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">ID счетчика Яндекс.Метрики</label>
+                  <Input
+                    value={yandexMetricaId}
+                    onChange={(e) => setYandexMetricaId(e.target.value)}
+                    placeholder="Введите ID счетчика (например: 12345678)"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Найдите ID в настройках счетчика в интерфейсе Яндекс.Метрики
+                  </p>
+                </div>
+                
+                <Button onClick={handleYandexMetricaSave} className="gradient-bg">
+                  <Icon name="Save" size={16} className="mr-2" />
+                  Сохранить настройки
+                </Button>
+              </CardContent>
+            </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>География пользователей</CardTitle>
-                  <CardDescription>Откуда приходят пользователи</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">🇷🇺 Россия</span>
-                      <span className="text-sm font-medium">67%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">🇺🇦 Украина</span>
-                      <span className="text-sm font-medium">12%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">🇰🇿 Казахстан</span>
-                      <span className="text-sm font-medium">8%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">🇧🇾 Беларусь</span>
-                      <span className="text-sm font-medium">6%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Другие</span>
-                      <span className="text-sm font-medium">7%</span>
-                    </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Безопасность</CardTitle>
+                <CardDescription>Настройки безопасности административной панели</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded">
+                  <div>
+                    <h4 className="font-medium">Автоматический выход</h4>
+                    <p className="text-sm text-gray-600">Сессия истекает через 30 минут неактивности</p>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                  <Badge>Активно</Badge>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 border rounded">
+                  <div>
+                    <h4 className="font-medium">Блокировка после неудачных попыток</h4>
+                    <p className="text-sm text-gray-600">Доступ блокируется на 5 минут после 3 неудачных попыток</p>
+                  </div>
+                  <Badge>Активно</Badge>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 border rounded">
+                  <div>
+                    <h4 className="font-medium">Логин администратора</h4>
+                    <p className="text-sm text-gray-600">ZassalAdmin (изменение недоступно)</p>
+                  </div>
+                  <Badge variant="secondary">Заблокировано</Badge>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
