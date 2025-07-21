@@ -7,121 +7,82 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
 import QRCode from 'qrcode';
+import JsBarcode from 'jsbarcode';
 
 export default function Index() {
-  const [dragActive, setDragActive] = useState(false);
-  const [qrText, setQrText] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState('free');
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [codeText, setCodeText] = useState('');
+  const [isQRCode, setIsQRCode] = useState(true);
   const [qrColor, setQrColor] = useState('#000000');
   const [qrBgColor, setQrBgColor] = useState('#FFFFFF');
   const [qrSize, setQrSize] = useState([256]);
-  const [showPayment, setShowPayment] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [errorCorrection, setErrorCorrection] = useState('M');
+  const [barcodeFormat, setBarcodeFormat] = useState('CODE128');
+  const [generatedCodeUrl, setGeneratedCodeUrl] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    const files = e.dataTransfer.files;
-    if (files && files[0]) {
-      handleFile(files[0]);
-    }
-  };
-
-  const handleFileSelect = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleFile(file);
-    }
-  };
-
-  const handleFile = (file: File) => {
-    // Check file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Файл слишком большой! Максимальный размер 5MB.');
-      return;
-    }
-
-    // Check file type
-    if (!file.type.match(/^image\/(png|jpe?g|webp)$/)) {
-      alert('Неподдерживаемый формат! Используйте PNG, JPG или WEBP.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      setUploadedImage(result);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const generateQRCode = async () => {
-    if (!qrText) {
-      alert('Введите содержимое для QR-кода');
+  const generateCode = async () => {
+    if (!codeText) {
+      setGeneratedCodeUrl(null);
       return;
     }
 
     try {
-      const qrDataUrl = await QRCode.toDataURL(qrText, {
-        width: qrSize[0],
-        margin: 2,
-        color: {
-          dark: qrColor,
-          light: qrBgColor,
-        },
-        errorCorrectionLevel: 'M',
-      });
-      setQrCodeUrl(qrDataUrl);
+      if (isQRCode) {
+        // Generate QR Code
+        const qrDataUrl = await QRCode.toDataURL(codeText, {
+          width: qrSize[0],
+          margin: 2,
+          color: {
+            dark: qrColor,
+            light: qrBgColor,
+          },
+          errorCorrectionLevel: errorCorrection as any,
+        });
+        setGeneratedCodeUrl(qrDataUrl);
+      } else {
+        // Generate Barcode
+        if (canvasRef.current) {
+          JsBarcode(canvasRef.current, codeText, {
+            format: barcodeFormat,
+            width: 2,
+            height: 100,
+            displayValue: true,
+            fontSize: 16,
+            textColor: qrColor,
+            lineColor: qrColor,
+            background: qrBgColor,
+          });
+          const barcodeDataUrl = canvasRef.current.toDataURL();
+          setGeneratedCodeUrl(barcodeDataUrl);
+        }
+      }
     } catch (error) {
-      console.error('Ошибка генерации QR-кода:', error);
-      alert('Ошибка генерации QR-кода');
+      console.error('Ошибка генерации кода:', error);
+      setGeneratedCodeUrl(null);
     }
   };
 
-  const downloadQRCode = () => {
-    if (!qrCodeUrl) return;
+  const downloadCode = () => {
+    if (!generatedCodeUrl) return;
     
     const link = document.createElement('a');
-    link.download = 'qr-code.png';
-    link.href = qrCodeUrl;
+    link.download = `${isQRCode ? 'qr-code' : 'barcode'}.png`;
+    link.href = generatedCodeUrl;
     link.click();
   };
 
-  const handlePayment = (plan: string) => {
-    setSelectedPlan(plan);
-    setShowPayment(true);
-  };
-
-  // Auto-generate QR when text changes
+  // Auto-generate code when parameters change
   useEffect(() => {
-    if (qrText) {
-      const timeout = setTimeout(generateQRCode, 500);
+    if (codeText) {
+      const timeout = setTimeout(generateCode, 500);
       return () => clearTimeout(timeout);
     } else {
-      setQrCodeUrl(null);
+      setGeneratedCodeUrl(null);
     }
-  }, [qrText, qrColor, qrBgColor, qrSize]);
+  }, [codeText, isQRCode, qrColor, qrBgColor, qrSize, errorCorrection, barcodeFormat]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50">
@@ -132,39 +93,45 @@ export default function Index() {
             <div className="w-8 h-8 gradient-bg rounded-lg flex items-center justify-center">
               <Icon name="QrCode" size={20} className="text-white" />
             </div>
-            <span className="text-xl font-bold gradient-text">AI QR Generator</span>
+            <span className="text-xl font-bold gradient-text">AI Code Generator</span>
           </div>
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost">Вход</Button>
-            <Button className="gradient-bg">Регистрация</Button>
+          
+          {/* Ad Space - Header */}
+          <div className="hidden md:block w-80 h-12 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-sm text-gray-500">
+            📢 Рекламное место 728x90
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 px-4">
+      <section className="py-16 px-4">
         <div className="container mx-auto text-center">
           <h1 className="text-5xl md:text-6xl font-bold mb-6">
-            Создавайте <span className="gradient-text">умные QR-коды</span>
-            <br />с помощью ИИ
+            Генератор <span className="gradient-text">QR-кодов</span>
+            <br />и штрих-кодов
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Загружайте изображения, настраивайте дизайн и получайте красивые QR-коды 
-            с AI-оптимизацией за считанные секунды
+            Создавайте QR-коды и штрих-коды бесплатно. Настраивайте дизайн, 
+            выбирайте формат и скачивайте в высоком качестве
           </p>
-          <div className="flex items-center justify-center space-x-4 mb-12">
-            <Badge variant="secondary" className="bg-purple-100 text-purple-700">
-              <Icon name="Sparkles" size={16} className="mr-1" />
-              AI-оптимизация
+          <div className="flex items-center justify-center space-x-4 mb-8">
+            <Badge variant="secondary" className="bg-green-100 text-green-700">
+              <Icon name="Check" size={16} className="mr-1" />
+              100% Бесплатно
             </Badge>
             <Badge variant="secondary" className="bg-blue-100 text-blue-700">
               <Icon name="Zap" size={16} className="mr-1" />
-              Быстрая генерация
+              Без регистрации
             </Badge>
-            <Badge variant="secondary" className="bg-green-100 text-green-700">
+            <Badge variant="secondary" className="bg-purple-100 text-purple-700">
               <Icon name="Download" size={16} className="mr-1" />
               HD качество
             </Badge>
+          </div>
+
+          {/* Ad Space - Below Hero */}
+          <div className="w-full max-w-2xl mx-auto h-20 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-sm text-gray-500 mb-8">
+            📢 Рекламное место 728x90
           </div>
         </div>
       </section>
@@ -174,128 +141,94 @@ export default function Index() {
         <div className="container mx-auto">
           <div className="grid lg:grid-cols-2 gap-12">
             
-            {/* Left Column - Generator */}
+            {/* Left Column - Generator Controls */}
             <div className="space-y-8">
-              <Card className="overflow-hidden">
+              
+              {/* Code Type Selector */}
+              <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Icon name="Upload" size={24} />
-                    <span>Шаг 1: Загрузите изображение</span>
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="flex items-center space-x-2">
+                      <Icon name="Settings" size={24} />
+                      <span>Тип кода</span>
+                    </span>
+                    <div className="flex items-center space-x-2 bg-gray-100 rounded-full p-1">
+                      <Button 
+                        size="sm" 
+                        variant={isQRCode ? "default" : "ghost"}
+                        className={`rounded-full px-4 ${isQRCode ? 'gradient-bg text-white' : ''}`}
+                        onClick={() => setIsQRCode(true)}
+                      >
+                        QR-код
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant={!isQRCode ? "default" : "ghost"}
+                        className={`rounded-full px-4 ${!isQRCode ? 'gradient-bg text-white' : ''}`}
+                        onClick={() => setIsQRCode(false)}
+                      >
+                        Штрих-код
+                      </Button>
+                    </div>
                   </CardTitle>
-                  <CardDescription>
-                    Перетащите файл или выберите с устройства (JPG, PNG, WEBP до 5MB)
-                  </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  {uploadedImage ? (
-                    <div className="space-y-4">
-                      <div className="relative w-64 h-64 mx-auto border-2 border-dashed border-gray-300 rounded-lg overflow-hidden">
-                        <img 
-                          src={uploadedImage} 
-                          alt="Uploaded" 
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex space-x-2 justify-center">
-                        <Button variant="outline" onClick={() => setUploadedImage(null)}>
-                          <Icon name="X" size={16} className="mr-1" />
-                          Удалить
-                        </Button>
-                        <Button onClick={handleFileSelect}>
-                          <Icon name="Upload" size={16} className="mr-1" />
-                          Заменить
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer ${
-                        dragActive 
-                          ? 'border-purple-500 bg-purple-50' 
-                          : 'border-gray-300 hover:border-purple-400'
-                      }`}
-                      onDragEnter={handleDrag}
-                      onDragLeave={handleDrag}
-                      onDragOver={handleDrag}
-                      onDrop={handleDrop}
-                      onClick={handleFileSelect}
-                    >
-                      <Icon name="ImageUp" size={48} className="mx-auto mb-4 text-gray-400" />
-                      <p className="text-lg mb-2">Перетащите изображение сюда</p>
-                      <p className="text-sm text-gray-500 mb-4">или</p>
-                      <Button>Выбрать файл</Button>
-                    </div>
-                  )}
-                  
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                </CardContent>
               </Card>
 
+              {/* Content Input */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Icon name="Type" size={24} />
-                    <span>Шаг 2: Содержимое QR</span>
+                    <span>Содержимое {isQRCode ? 'QR-кода' : 'штрих-кода'}</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Tabs defaultValue="url" className="w-full">
+                  <Tabs defaultValue="text" className="w-full">
                     <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="url">URL</TabsTrigger>
                       <TabsTrigger value="text">Текст</TabsTrigger>
-                      <TabsTrigger value="contact">Контакт</TabsTrigger>
+                      <TabsTrigger value="url">URL</TabsTrigger>
+                      <TabsTrigger value="number">Номер</TabsTrigger>
                     </TabsList>
+                    <TabsContent value="text">
+                      <Textarea 
+                        placeholder={isQRCode ? "Введите текст для QR-кода" : "Введите текст для штрих-кода"}
+                        value={codeText}
+                        onChange={(e) => setCodeText(e.target.value)}
+                        rows={3}
+                      />
+                    </TabsContent>
                     <TabsContent value="url">
                       <Input 
                         placeholder="https://example.com" 
-                        value={qrText}
-                        onChange={(e) => setQrText(e.target.value)}
+                        value={codeText}
+                        onChange={(e) => setCodeText(e.target.value)}
                       />
                     </TabsContent>
-                    <TabsContent value="text">
-                      <Textarea 
-                        placeholder="Введите ваш текст (до 250 символов)" 
-                        value={qrText}
-                        onChange={(e) => setQrText(e.target.value)}
+                    <TabsContent value="number">
+                      <Input 
+                        placeholder={isQRCode ? "Введите номер" : "1234567890123"}
+                        value={codeText}
+                        onChange={(e) => setCodeText(e.target.value)}
                       />
-                    </TabsContent>
-                    <TabsContent value="contact">
-                      <div className="space-y-4">
-                        <Input placeholder="Имя" />
-                        <Input placeholder="Телефон" />
-                        <Input placeholder="Email" />
-                      </div>
                     </TabsContent>
                   </Tabs>
                 </CardContent>
               </Card>
 
+              {/* Design Settings */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Icon name="Palette" size={24} />
-                    <span>Шаг 3: Дизайн</span>
+                    <span>Настройки дизайна</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <span>Форма модулей</span>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm">Квадрат</Button>
-                      <Button variant="outline" size="sm">Круг</Button>
-                      <Button variant="outline" size="sm">Скругление</Button>
-                    </div>
-                  </div>
                   
+                  {/* Colors */}
                   <div className="space-y-3">
                     <div className="space-y-2">
-                      <span className="text-sm font-medium">Цвет QR-кода</span>
+                      <span className="text-sm font-medium">Цвет кода</span>
                       <div className="flex items-center space-x-2">
                         <input
                           type="color"
@@ -306,7 +239,7 @@ export default function Index() {
                         <Input 
                           value={qrColor} 
                           onChange={(e) => setQrColor(e.target.value)}
-                          className="w-20 text-xs"
+                          className="w-24 text-xs"
                         />
                       </div>
                     </div>
@@ -323,106 +256,141 @@ export default function Index() {
                         <Input 
                           value={qrBgColor} 
                           onChange={(e) => setQrBgColor(e.target.value)}
-                          className="w-20 text-xs"
+                          className="w-24 text-xs"
                         />
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <span className="text-sm font-medium">Размер QR: {qrSize[0]}px</span>
-                    <Slider 
-                      value={qrSize} 
-                      onValueChange={setQrSize}
-                      min={128}
-                      max={1024} 
-                      step={32}
-                    />
-                  </div>
+                  {isQRCode ? (
+                    <>
+                      {/* QR Code specific settings */}
+                      <div className="space-y-2">
+                        <span className="text-sm font-medium">Размер: {qrSize[0]}px</span>
+                        <Slider 
+                          value={qrSize} 
+                          onValueChange={setQrSize}
+                          min={128}
+                          max={1024} 
+                          step={32}
+                        />
+                      </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Добавить логотип</span>
-                    <Switch />
-                  </div>
+                      <div className="space-y-2">
+                        <span className="text-sm font-medium">Уровень коррекции ошибок</span>
+                        <Select value={errorCorrection} onValueChange={setErrorCorrection}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="L">Низкий (7%)</SelectItem>
+                            <SelectItem value="M">Средний (15%)</SelectItem>
+                            <SelectItem value="Q">Высокий (25%)</SelectItem>
+                            <SelectItem value="H">Максимальный (30%)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Barcode specific settings */}
+                      <div className="space-y-2">
+                        <span className="text-sm font-medium">Формат штрих-кода</span>
+                        <Select value={barcodeFormat} onValueChange={setBarcodeFormat}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="CODE128">CODE128</SelectItem>
+                            <SelectItem value="EAN13">EAN13</SelectItem>
+                            <SelectItem value="EAN8">EAN8</SelectItem>
+                            <SelectItem value="UPC">UPC</SelectItem>
+                            <SelectItem value="CODE39">CODE39</SelectItem>
+                            <SelectItem value="ITF14">ITF14</SelectItem>
+                            <SelectItem value="MSI">MSI</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>
 
-            {/* Right Column - Preview & Features */}
+            {/* Right Column - Preview & Actions */}
             <div className="space-y-8">
+              
+              {/* Preview Card */}
               <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
                 <CardContent className="p-8 text-center">
                   <div className="w-64 h-64 mx-auto mb-6 bg-white rounded-lg shadow-lg flex items-center justify-center overflow-hidden">
-                    {qrCodeUrl ? (
+                    {generatedCodeUrl ? (
                       <img 
-                        src={qrCodeUrl} 
-                        alt="Generated QR Code" 
+                        src={generatedCodeUrl} 
+                        alt={`Generated ${isQRCode ? 'QR Code' : 'Barcode'}`}
                         className="max-w-full max-h-full object-contain"
                       />
                     ) : (
                       <div className="w-48 h-48 border-2 border-dashed border-gray-300 rounded flex items-center justify-center">
-                        <Icon name="QrCode" size={64} className="text-gray-400" />
+                        <Icon name={isQRCode ? "QrCode" : "Barcode"} size={64} className="text-gray-400" />
                       </div>
                     )}
                   </div>
                   <h3 className="text-xl font-bold mb-2">
-                    {qrCodeUrl ? 'QR-код готов!' : 'Предварительный просмотр'}
+                    {generatedCodeUrl ? `${isQRCode ? 'QR-код' : 'Штрих-код'} готов!` : 'Предварительный просмотр'}
                   </h3>
                   <p className="text-gray-600 mb-4">
-                    {qrCodeUrl ? 'Нажмите кнопку ниже для скачивания' : 'QR-код появится здесь после заполнения полей'}
+                    {generatedCodeUrl ? 'Скачайте код в высоком качестве' : `${isQRCode ? 'QR-код' : 'Штрих-код'} появится здесь после ввода данных`}
                   </p>
-                  <div className="space-y-2">
-                    <Button 
-                      size="lg" 
-                      className="gradient-bg w-full"
-                      onClick={downloadQRCode}
-                      disabled={!qrCodeUrl}
-                    >
-                      <Icon name="Download" size={20} className="mr-2" />
-                      Скачать QR-код
-                    </Button>
-                    {qrCodeUrl && (
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="w-full"
-                        onClick={generateQRCode}
-                      >
-                        <Icon name="RefreshCw" size={16} className="mr-2" />
-                        Перегенерировать
-                      </Button>
-                    )}
+                  <Button 
+                    size="lg" 
+                    className="gradient-bg w-full"
+                    onClick={downloadCode}
+                    disabled={!generatedCodeUrl}
+                  >
+                    <Icon name="Download" size={20} className="mr-2" />
+                    Скачать {isQRCode ? 'QR-код' : 'штрих-код'}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Ad Space - Sidebar */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="w-full h-64 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-sm text-gray-500">
+                    📢 Рекламное место 300x250
                   </div>
                 </CardContent>
               </Card>
 
+              {/* Features */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Icon name="Sparkles" size={24} />
-                    <span>AI-возможности</span>
+                    <span>Возможности сервиса</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-start space-x-3">
-                    <Icon name="Brain" size={20} className="mt-1 text-purple-600" />
+                    <Icon name="Zap" size={20} className="mt-1 text-blue-600" />
                     <div>
-                      <h4 className="font-medium">Умная оптимизация</h4>
-                      <p className="text-sm text-gray-600">Автоматическая коррекция контраста и яркости</p>
+                      <h4 className="font-medium">Быстрая генерация</h4>
+                      <p className="text-sm text-gray-600">Коды создаются мгновенно в реальном времени</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
-                    <Icon name="Shield" size={20} className="mt-1 text-green-600" />
+                    <Icon name="Palette" size={20} className="mt-1 text-purple-600" />
                     <div>
-                      <h4 className="font-medium">NSFW фильтр</h4>
-                      <p className="text-sm text-gray-600">Проверка контента через Google Vision API</p>
+                      <h4 className="font-medium">Гибкие настройки</h4>
+                      <p className="text-sm text-gray-600">Настройка цветов, размера и формата</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
-                    <Icon name="Crop" size={20} className="mt-1 text-blue-600" />
+                    <Icon name="Download" size={20} className="mt-1 text-green-600" />
                     <div>
-                      <h4 className="font-medium">Умная обрезка</h4>
-                      <p className="text-sm text-gray-600">Автоматическое удаление фона и кроппинг</p>
+                      <h4 className="font-medium">Высокое качество</h4>
+                      <p className="text-sm text-gray-600">Скачивание в PNG формате до 1024px</p>
                     </div>
                   </div>
                 </CardContent>
@@ -432,163 +400,11 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section className="py-20 px-4 bg-gray-50">
+      {/* Ad Space - Before Footer */}
+      <section className="py-8 px-4">
         <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">Выберите тарифный план</h2>
-            <p className="text-xl text-gray-600">Начните бесплатно или получите доступ к премиум-функциям</p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <Card className="relative">
-              <CardHeader>
-                <CardTitle>Бесплатный</CardTitle>
-                <CardDescription>Для персонального использования</CardDescription>
-                <div className="text-3xl font-bold">0 ₽</div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Icon name="Check" size={16} className="text-green-600" />
-                  <span className="text-sm">5 QR-кодов в день</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Icon name="Check" size={16} className="text-green-600" />
-                  <span className="text-sm">Базовые настройки</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Icon name="Check" size={16} className="text-green-600" />
-                  <span className="text-sm">PNG загрузка</span>
-                </div>
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => setSelectedPlan('free')}
-                >
-                  Начать бесплатно
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="relative border-purple-500 shadow-lg scale-105">
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <Badge className="gradient-bg">Популярный</Badge>
-              </div>
-              <CardHeader>
-                <CardTitle>Pro</CardTitle>
-                <CardDescription>Для профессионалов</CardDescription>
-                <div className="text-3xl font-bold">799 ₽<span className="text-sm font-normal">/мес</span></div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Icon name="Check" size={16} className="text-green-600" />
-                  <span className="text-sm">Неограниченные QR-коды</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Icon name="Check" size={16} className="text-green-600" />
-                  <span className="text-sm">Динамические QR-коды</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Icon name="Check" size={16} className="text-green-600" />
-                  <span className="text-sm">Аналитика сканирований</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Icon name="Check" size={16} className="text-green-600" />
-                  <span className="text-sm">Без водяных знаков</span>
-                </div>
-                <Button 
-                  className="w-full gradient-bg"
-                  onClick={() => handlePayment('pro')}
-                >
-                  Выбрать Pro
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Enterprise</CardTitle>
-                <CardDescription>Для команд и бизнеса</CardDescription>
-                <div className="text-3xl font-bold">1990 ₽<span className="text-sm font-normal">/мес</span></div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Icon name="Check" size={16} className="text-green-600" />
-                  <span className="text-sm">Все функции Pro</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Icon name="Check" size={16} className="text-green-600" />
-                  <span className="text-sm">White Label</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Icon name="Check" size={16} className="text-green-600" />
-                  <span className="text-sm">API доступ</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Icon name="Check" size={16} className="text-green-600" />
-                  <span className="text-sm">Кастомный домен</span>
-                </div>
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => handlePayment('enterprise')}
-                >
-                  Выбрать Enterprise
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Почему выбирают нас?</h2>
-            <p className="text-xl text-gray-600">Передовые технологии для создания идеальных QR-кодов</p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <Card className="text-center hover:shadow-lg transition-all duration-300 hover:scale-105 animate-fade-in">
-              <CardContent className="p-6">
-                <div className="w-12 h-12 gradient-bg rounded-lg mx-auto mb-4 flex items-center justify-center animate-pulse-slow">
-                  <Icon name="QrCode" size={24} className="text-white" />
-                </div>
-                <h3 className="font-bold mb-2">Высокое качество</h3>
-                <p className="text-sm text-gray-600">QR-коды в разрешении до 4K с идеальной читаемостью</p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center hover:shadow-lg transition-all duration-300 hover:scale-105 animate-fade-in">
-              <CardContent className="p-6">
-                <div className="w-12 h-12 gradient-bg rounded-lg mx-auto mb-4 flex items-center justify-center animate-pulse-slow">
-                  <Icon name="Sparkles" size={24} className="text-white" />
-                </div>
-                <h3 className="font-bold mb-2">AI магия</h3>
-                <p className="text-sm text-gray-600">Автоматическая оптимизация и улучшение изображений</p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center hover:shadow-lg transition-all duration-300 hover:scale-105 animate-fade-in">
-              <CardContent className="p-6">
-                <div className="w-12 h-12 gradient-bg rounded-lg mx-auto mb-4 flex items-center justify-center animate-pulse-slow">
-                  <Icon name="BarChart3" size={24} className="text-white" />
-                </div>
-                <h3 className="font-bold mb-2">Аналитика</h3>
-                <p className="text-sm text-gray-600">Подробная статистика сканирований и географии</p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center hover:shadow-lg transition-all duration-300 hover:scale-105 animate-fade-in">
-              <CardContent className="p-6">
-                <div className="w-12 h-12 gradient-bg rounded-lg mx-auto mb-4 flex items-center justify-center animate-pulse-slow">
-                  <Icon name="Smartphone" size={24} className="text-white" />
-                </div>
-                <h3 className="font-bold mb-2">Мобильность</h3>
-                <p className="text-sm text-gray-600">Полная адаптация под мобильные устройства</p>
-              </CardContent>
-            </Card>
+          <div className="w-full h-24 border-2 border-dashed border-gray-300 rounded flex items-center justify-center text-sm text-gray-500">
+            📢 Рекламное место 728x90
           </div>
         </div>
       </section>
@@ -596,117 +412,43 @@ export default function Index() {
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <div className="w-8 h-8 gradient-bg rounded-lg flex items-center justify-center">
                   <Icon name="QrCode" size={20} className="text-white" />
                 </div>
-                <span className="text-xl font-bold">AI QR Generator</span>
+                <span className="text-xl font-bold">AI Code Generator</span>
               </div>
-              <p className="text-gray-400">Создавайте красивые QR-коды с помощью искусственного интеллекта</p>
+              <p className="text-gray-400">Бесплатный генератор QR-кодов и штрих-кодов</p>
             </div>
             <div>
-              <h4 className="font-bold mb-4">Продукт</h4>
+              <h4 className="font-bold mb-4">Форматы</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white">Генератор</a></li>
-                <li><a href="#" className="hover:text-white">API</a></li>
-                <li><a href="#" className="hover:text-white">Шаблоны</a></li>
-                <li><a href="#" className="hover:text-white">Интеграции</a></li>
+                <li>QR-коды (все типы)</li>
+                <li>CODE128, EAN13, EAN8</li>
+                <li>UPC, CODE39, ITF14</li>
+                <li>Экспорт в PNG</li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold mb-4">Поддержка</h4>
+              <h4 className="font-bold mb-4">О сервисе</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white">Документация</a></li>
-                <li><a href="#" className="hover:text-white">FAQ</a></li>
-                <li><a href="#" className="hover:text-white">Контакты</a></li>
-                <li><a href="#" className="hover:text-white">Статус</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold mb-4">Компания</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white">О нас</a></li>
-                <li><a href="#" className="hover:text-white">Блог</a></li>
-                <li><a href="#" className="hover:text-white">Карьера</a></li>
-                <li><a href="#" className="hover:text-white">Пресса</a></li>
+                <li>100% бесплатно</li>
+                <li>Без регистрации</li>
+                <li>Высокое качество</li>
+                <li><a href="/admin" className="hover:text-white">Админ панель</a></li>
               </ul>
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 AI QR Generator. Все права защищены.</p>
+            <p>&copy; 2024 AI Code Generator. Все права защищены.</p>
           </div>
         </div>
       </footer>
 
-      {/* Payment Dialog */}
-      <Dialog open={showPayment} onOpenChange={setShowPayment}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Оплата тарифа {selectedPlan === 'pro' ? 'Pro' : 'Enterprise'}</DialogTitle>
-            <DialogDescription>
-              Выберите способ оплаты для активации подписки
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="p-4 border rounded-lg bg-purple-50">
-              <h4 className="font-medium mb-2">Выбранный план: {selectedPlan === 'pro' ? 'Pro' : 'Enterprise'}</h4>
-              <p className="text-sm text-gray-600 mb-2">
-                Стоимость: {selectedPlan === 'pro' ? '799 ₽/мес' : '1990 ₽/мес'}
-              </p>
-              <div className="text-xs text-gray-500">
-                {selectedPlan === 'pro' ? 
-                  '• Неограниченные QR-коды\n• Динамические QR-коды\n• Аналитика сканирований\n• Без водяных знаков' :
-                  '• Все функции Pro\n• White Label\n• API доступ\n• Кастомный домен'
-                }
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <Button 
-                className="w-full gradient-bg"
-                onClick={() => {
-                  alert(`Переход к оплате ${selectedPlan === 'pro' ? '799 ₽' : '1990 ₽'} через ЮMoney/Сбербанк`);
-                  setShowPayment(false);
-                }}
-              >
-                <Icon name="CreditCard" size={20} className="mr-2" />
-                Оплатить картой
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => {
-                  alert(`Переход к оплате ${selectedPlan === 'pro' ? '799 ₽' : '1990 ₽'} через СБП`);
-                  setShowPayment(false);
-                }}
-              >
-                <Icon name="Smartphone" size={20} className="mr-2" />
-                СБП (Быстрые платежи)
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => {
-                  alert(`Переход к оплате ${selectedPlan === 'pro' ? '799 ₽' : '1990 ₽'} через Qiwi`);
-                  setShowPayment(false);
-                }}
-              >
-                <Icon name="Wallet" size={20} className="mr-2" />
-                Qiwi / ЮMoney
-              </Button>
-            </div>
-            
-            <div className="text-xs text-gray-500 text-center pt-2 border-t">
-              Безопасная оплата через защищенное соединение.<br />
-              Подписка активируется автоматически после оплаты.
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Hidden canvas for barcode generation */}
+      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 }
