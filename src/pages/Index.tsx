@@ -603,33 +603,33 @@ export default function Index() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50">
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-4 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 gradient-bg rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 sm:w-8 sm:h-8 gradient-bg rounded-lg flex items-center justify-center">
               <Icon name="QrCode" size={20} className="text-white" />
             </div>
             <span className="text-xl font-bold gradient-text">AI Code Generator Pro</span>
           </div>
           
           {/* Ad Space - Header */}
-          <div className="hidden md:block w-80 h-12 flex items-center justify-center">
+          <div className="hidden md:block w-full max-w-80 h-12 flex items-center justify-center">
             <AdRenderer position="header" className="max-w-full max-h-full" />
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="py-16 px-4">
+      <section className="py-8 sm:py-12 lg:py-16 px-4">
         <div className="container mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl font-bold mb-6">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
             Генератор <span className="gradient-text">любых кодов</span>
             <br />с AI-технологиями
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             QR-коды, штрих-коды, DataMatrix, Aztec. Расширенные настройки дизайна, 
             batch-генерация и множество уникальных возможностей
           </p>
-          <div className="flex items-center justify-center space-x-4 mb-8">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 mb-8">
             <Badge variant="secondary" className="bg-green-100 text-green-700">
               <Icon name="Check" size={16} className="mr-1" />
               100% Бесплатно
@@ -658,7 +658,7 @@ export default function Index() {
       {/* Main Generator */}
       <section className="py-12 px-4">
         <div className="container mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
             
             {/* Left Column - Generator Controls */}
             <div className="space-y-8">
@@ -672,38 +672,38 @@ export default function Index() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                     <Button 
                       variant={codeType === 'qr' ? "default" : "outline"}
-                      className={`h-16 flex flex-col ${codeType === 'qr' ? 'gradient-bg text-white' : ''}`}
+                      className={`h-16 sm:h-20 flex flex-col p-3 ${codeType === 'qr' ? 'gradient-bg text-white' : ''}`}
                       onClick={() => setCodeType('qr')}
                     >
                       <Icon name="QrCode" size={20} />
-                      <span className="text-xs mt-1">QR-код</span>
+                      <span className="text-sm sm:text-xs mt-1">QR-код</span>
                     </Button>
                     <Button 
                       variant={codeType === 'barcode' ? "default" : "outline"}
-                      className={`h-16 flex flex-col ${codeType === 'barcode' ? 'gradient-bg text-white' : ''}`}
+                      className={`h-16 sm:h-20 flex flex-col p-3 ${codeType === 'barcode' ? 'gradient-bg text-white' : ''}`}
                       onClick={() => setCodeType('barcode')}
                     >
                       <Icon name="Barcode" size={20} />
-                      <span className="text-xs mt-1">Штрих-код</span>
+                      <span className="text-sm sm:text-xs mt-1">Штрих-код</span>
                     </Button>
                     <Button 
                       variant={codeType === 'datamatrix' ? "default" : "outline"}
-                      className={`h-16 flex flex-col ${codeType === 'datamatrix' ? 'gradient-bg text-white' : ''}`}
+                      className={`h-16 sm:h-20 flex flex-col p-3 ${codeType === 'datamatrix' ? 'gradient-bg text-white' : ''}`}
                       onClick={() => setCodeType('datamatrix')}
                     >
                       <Icon name="Grid3X3" size={20} />
-                      <span className="text-xs mt-1">DataMatrix</span>
+                      <span className="text-sm sm:text-xs mt-1">DataMatrix</span>
                     </Button>
                     <Button 
                       variant={codeType === 'aztec' ? "default" : "outline"}
-                      className={`h-16 flex flex-col ${codeType === 'aztec' ? 'gradient-bg text-white' : ''}`}
+                      className={`h-16 sm:h-20 flex flex-col p-3 ${codeType === 'aztec' ? 'gradient-bg text-white' : ''}`}
                       onClick={() => setCodeType('aztec')}
                     >
                       <Icon name="Target" size={20} />
-                      <span className="text-xs mt-1">Aztec</span>
+                      <span className="text-sm sm:text-xs mt-1">Aztec</span>
                     </Button>
                   </div>
                 </CardContent>
@@ -770,7 +770,7 @@ export default function Index() {
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="text" className="w-full">
-                    <TabsList className="grid w-full grid-cols-4">
+                    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
                       <TabsTrigger value="text">Текст</TabsTrigger>
                       <TabsTrigger value="url">URL</TabsTrigger>
                       <TabsTrigger value="contact">Контакт</TabsTrigger>
@@ -909,7 +909,7 @@ export default function Index() {
                               type="color"
                               value={qrColor}
                               onChange={(e) => setQrColor(e.target.value)}
-                              className="w-10 h-10 rounded border cursor-pointer"
+                              className="w-12 h-12 sm:w-10 sm:h-10 rounded border cursor-pointer touch-manipulation"
                             />
                             <Input 
                               value={qrColor} 
@@ -1105,10 +1105,10 @@ export default function Index() {
                               size="sm"
                               variant={qrStyle === style.id ? "default" : "outline"}
                               onClick={() => setQrStyle(style.id)}
-                              className="flex flex-col h-16"
+                              className="flex flex-col h-16 sm:h-20 p-2"
                             >
                               <Icon name={style.icon as any} size={16} />
-                              <span className="text-xs mt-1">{style.name}</span>
+                              <span className="text-sm sm:text-xs mt-1">{style.name}</span>
                             </Button>
                           ))}
                         </div>
@@ -1117,7 +1117,7 @@ export default function Index() {
 
 
                       {/* Size & Error Correction */}
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <span className="text-sm font-medium">Размер: {qrSize[0]}px</span>
                           <Slider 
@@ -1188,8 +1188,8 @@ export default function Index() {
               
               {/* Preview Card */}
               <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-                <CardContent className="p-8 text-center">
-                  <div className="w-80 h-80 mx-auto mb-6 bg-white rounded-lg shadow-lg flex items-center justify-center overflow-hidden">
+                <CardContent className="p-4 sm:p-6 lg:p-8 text-center">
+                  <div className="w-full max-w-80 h-64 sm:h-80 mx-auto mb-6 bg-white rounded-lg shadow-lg flex items-center justify-center overflow-hidden">
                     {generatedCodeUrl ? (
                       <img 
                         src={generatedCodeUrl} 
@@ -1197,7 +1197,7 @@ export default function Index() {
                         className="max-w-full max-h-full object-contain"
                       />
                     ) : (
-                      <div className="w-48 h-48 border-2 border-dashed border-gray-300 rounded flex items-center justify-center">
+                      <div className="w-32 h-32 sm:w-48 sm:h-48 border-2 border-dashed border-gray-300 rounded flex items-center justify-center">
                         <Icon name={codeType === 'qr' ? "QrCode" : codeType === 'barcode' ? "Barcode" : "Grid3X3"} size={64} className="text-gray-400" />
                       </div>
                     )}
@@ -1297,7 +1297,7 @@ export default function Index() {
           </div>
           
           {approvedReviews.length > 0 ? (
-            <div className="grid md:grid-cols-3 gap-8 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
               {approvedReviews.map((review) => {
                 const colors = ['bg-purple-500', 'bg-blue-500', 'bg-green-500', 'bg-orange-500', 'bg-pink-500', 'bg-indigo-500'];
                 const colorClass = colors[Math.floor(Math.random() * colors.length)];
@@ -1306,7 +1306,7 @@ export default function Index() {
 
                 return (
                   <Card key={review.id} className="hover:shadow-lg transition-shadow">
-                    <CardContent className="p-6">
+                    <CardContent className="p-4 sm:p-6">
                       <div className="flex items-center mb-4">
                         <div className={`w-12 h-12 ${colorClass} rounded-full flex items-center justify-center text-white font-bold`}>
                           {initial}
@@ -1392,7 +1392,7 @@ export default function Index() {
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <div className="w-8 h-8 gradient-bg rounded-lg flex items-center justify-center">
@@ -1404,7 +1404,7 @@ export default function Index() {
             </div>
             <div>
               <h4 className="font-bold mb-4">Поддерживаемые форматы</h4>
-              <ul className="space-y-2 text-gray-400">
+              <ul className="space-y-2 text-gray-400 text-sm sm:text-base">
                 <li>QR-коды (все типы + логотипы)</li>
                 <li>Штрих-коды (7+ форматов)</li>
                 <li>DataMatrix (2D коды)</li>
@@ -1414,7 +1414,7 @@ export default function Index() {
             </div>
             <div>
               <h4 className="font-bold mb-4">Возможности</h4>
-              <ul className="space-y-2 text-gray-400">
+              <ul className="space-y-2 text-gray-400 text-sm sm:text-base">
                 <li>Продвинутый дизайн</li>
                 <li>Множество стилей</li>
                 <li>Высокое разрешение до 1024px</li>
