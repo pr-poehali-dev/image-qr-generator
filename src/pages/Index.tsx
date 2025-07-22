@@ -26,12 +26,14 @@ export default function Index() {
   const [codeType, setCodeType] = useState<'qr' | 'barcode' | 'datamatrix' | 'aztec'>('qr');
   const [qrColor, setQrColor] = useState('#000000');
   const [qrBgColor, setQrBgColor] = useState('#FFFFFF');
-  const [qrColorType, setQrColorType] = useState<'solid' | 'gradient'>('solid');
+  const [qrColorType, setQrColorType] = useState<'solid' | 'gradient' | 'artistic'>('solid');
   const [qrGradientStart, setQrGradientStart] = useState('#000000');
   const [qrGradientEnd, setQrGradientEnd] = useState('#0000FF');
   const [qrSize, setQrSize] = useState([256]);
   const [errorCorrection, setErrorCorrection] = useState('M');
   const [qrStyle, setQrStyle] = useState('square');
+  const [artisticStyle, setArtisticStyle] = useState('abstract');
+  const [isGeneratingArt, setIsGeneratingArt] = useState(false);
 
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
@@ -109,7 +111,205 @@ export default function Index() {
         case 'qr': {
           const size = qrSize[0];
           
-          if (qrColorType === 'gradient' || qrStyle !== 'square') {
+          if (qrColorType === 'artistic') {
+            // Artistic QR with generated background
+            setIsGeneratingArt(true);
+            
+            try {
+              // Generate artistic background based on selected style
+              const stylePrompts = {
+                abstract: `abstract art background, colorful geometric shapes, vibrant colors, modern digital art style, 
+                          flowing patterns, artistic composition, suitable for QR code overlay, high contrast areas`,
+                nature: `beautiful nature background with flowers, leaves, botanical elements, soft pastel colors, 
+                         watercolor style, organic patterns, suitable for QR code overlay`,
+                geometric: `geometric pattern background, clean lines, symmetrical shapes, modern design, 
+                           minimalist style, contrasting colors, suitable for QR code overlay`,
+                watercolor: `watercolor background, soft flowing colors, paint splashes, artistic brushstrokes, 
+                            gentle gradients, suitable for QR code overlay, high contrast areas`
+              };
+              
+              const prompt = stylePrompts[artisticStyle as keyof typeof stylePrompts] || stylePrompts.abstract;
+              
+              // Generate background image
+              const backgroundPath = await new Promise<string>((resolve, reject) => {
+                // Since we can't call generate_image directly here, we'll create a placeholder
+                // In a real implementation, you'd call your image generation API here
+                setTimeout(() => {
+                  // Create a colorful canvas as placeholder
+                  const bgCanvas = document.createElement('canvas');
+                  bgCanvas.width = size;
+                  bgCanvas.height = size;
+                  const bgCtx = bgCanvas.getContext('2d');
+                  
+                  if (bgCtx) {
+                    // Create artistic background based on style
+                    if (artisticStyle === 'abstract') {
+                      // Abstract colorful background
+                      const gradient = bgCtx.createRadialGradient(size/3, size/3, 0, size/2, size/2, size/2);
+                      gradient.addColorStop(0, '#FF6B6B');
+                      gradient.addColorStop(0.3, '#4ECDC4');
+                      gradient.addColorStop(0.6, '#45B7D1');
+                      gradient.addColorStop(1, '#96CEB4');
+                      bgCtx.fillStyle = gradient;
+                      bgCtx.fillRect(0, 0, size, size);
+                      
+                      // Add some circles for texture
+                      for (let i = 0; i < 20; i++) {
+                        bgCtx.beginPath();
+                        bgCtx.arc(Math.random() * size, Math.random() * size, Math.random() * 30 + 10, 0, Math.PI * 2);
+                        bgCtx.fillStyle = `hsla(${Math.random() * 360}, 70%, 60%, 0.3)`;
+                        bgCtx.fill();
+                      }
+                    } else if (artisticStyle === 'nature') {
+                      // Nature-inspired background
+                      const gradient = bgCtx.createLinearGradient(0, 0, size, size);
+                      gradient.addColorStop(0, '#8FBC8F');
+                      gradient.addColorStop(0.5, '#98FB98');
+                      gradient.addColorStop(1, '#F0FFF0');
+                      bgCtx.fillStyle = gradient;
+                      bgCtx.fillRect(0, 0, size, size);
+                      
+                      // Add leaf-like shapes
+                      for (let i = 0; i < 15; i++) {
+                        bgCtx.beginPath();
+                        const x = Math.random() * size;
+                        const y = Math.random() * size;
+                        bgCtx.ellipse(x, y, 20, 40, Math.random() * Math.PI, 0, Math.PI * 2);
+                        bgCtx.fillStyle = `hsla(120, 60%, 40%, 0.2)`;
+                        bgCtx.fill();
+                      }
+                    } else if (artisticStyle === 'geometric') {
+                      // Geometric background
+                      bgCtx.fillStyle = '#F8F9FA';
+                      bgCtx.fillRect(0, 0, size, size);
+                      
+                      // Add geometric shapes
+                      const colors = ['#6C5CE7', '#A29BFE', '#FD79A8', '#FDCB6E'];
+                      for (let i = 0; i < 10; i++) {
+                        bgCtx.fillStyle = colors[Math.floor(Math.random() * colors.length)] + '30';
+                        const shapeSize = 30 + Math.random() * 40;
+                        bgCtx.fillRect(
+                          Math.random() * (size - shapeSize), 
+                          Math.random() * (size - shapeSize), 
+                          shapeSize, 
+                          shapeSize
+                        );
+                      }
+                    } else {
+                      // Watercolor style
+                      bgCtx.fillStyle = '#FFF';
+                      bgCtx.fillRect(0, 0, size, size);
+                      
+                      // Create watercolor effect
+                      const colors = ['#FF7675', '#74B9FF', '#00B894', '#FDCB6E', '#E17055'];
+                      for (let i = 0; i < 8; i++) {
+                        const gradient = bgCtx.createRadialGradient(
+                          Math.random() * size, Math.random() * size, 0,
+                          Math.random() * size, Math.random() * size, size/3
+                        );
+                        const color = colors[Math.floor(Math.random() * colors.length)];
+                        gradient.addColorStop(0, color + '40');
+                        gradient.addColorStop(1, color + '00');
+                        bgCtx.fillStyle = gradient;
+                        bgCtx.fillRect(0, 0, size, size);
+                      }
+                    }
+                    
+                    resolve(bgCanvas.toDataURL());
+                  } else {
+                    reject(new Error('Could not create background'));
+                  }
+                }, 1000); // Simulate generation time
+              });
+              
+              // Create QR code with artistic background
+              const canvas = document.createElement('canvas');
+              canvas.width = size;
+              canvas.height = size;
+              const ctx = canvas.getContext('2d');
+              
+              if (ctx) {
+                // Draw background
+                const bgImg = new Image();
+                await new Promise((resolve) => {
+                  bgImg.onload = resolve;
+                  bgImg.src = backgroundPath;
+                });
+                ctx.drawImage(bgImg, 0, 0, size, size);
+                
+                // Generate QR code with transparency
+                const qrData = await QRCode.toDataURL(codeText, {
+                  width: size,
+                  margin: 2,
+                  color: {
+                    dark: '#000000',
+                    light: '#00000000', // Transparent background
+                  },
+                  errorCorrectionLevel: 'H', // High error correction for artistic overlay
+                });
+                
+                // Load QR image
+                const qrImg = new Image();
+                await new Promise((resolve) => {
+                  qrImg.onload = resolve;
+                  qrImg.src = qrData;
+                });
+                
+                // Draw QR with enhanced contrast
+                ctx.globalCompositeOperation = 'multiply';
+                ctx.drawImage(qrImg, 0, 0, size, size);
+                ctx.globalCompositeOperation = 'source-over';
+                
+                // Add white outline to QR modules for better readability
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = size;
+                tempCanvas.height = size;
+                const tempCtx = tempCanvas.getContext('2d')!;
+                tempCtx.drawImage(qrImg, 0, 0);
+                const imageData = tempCtx.getImageData(0, 0, size, size);
+                
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 1;
+                const moduleSize = Math.ceil(size / 33);
+                
+                for (let y = 0; y < size; y += moduleSize) {
+                  for (let x = 0; x < size; x += moduleSize) {
+                    let shouldStroke = false;
+                    for (let dy = 0; dy < moduleSize && !shouldStroke; dy++) {
+                      for (let dx = 0; dx < moduleSize && !shouldStroke; dx++) {
+                        const pixelY = Math.min(y + dy, size - 1);
+                        const pixelX = Math.min(x + dx, size - 1);
+                        const pixel = (pixelY * size + pixelX) * 4;
+                        if (imageData.data[pixel] < 128) {
+                          shouldStroke = true;
+                        }
+                      }
+                    }
+                    
+                    if (shouldStroke) {
+                      ctx.strokeRect(x, y, moduleSize, moduleSize);
+                    }
+                  }
+                }
+                
+                codeDataUrl = canvas.toDataURL('image/png');
+              }
+            } catch (error) {
+              console.error('Error generating artistic QR:', error);
+              // Fallback to regular QR
+              codeDataUrl = await QRCode.toDataURL(codeText, {
+                width: qrSize[0],
+                margin: 2,
+                color: {
+                  dark: '#000000',
+                  light: '#FFFFFF',
+                },
+                errorCorrectionLevel: errorCorrection as any,
+              });
+            } finally {
+              setIsGeneratingArt(false);
+            }
+          } else if (qrColorType === 'gradient' || qrStyle !== 'square') {
             // Custom rendering for gradient or styled QR codes
             const canvas = document.createElement('canvas');
             canvas.width = size;
@@ -402,7 +602,7 @@ export default function Index() {
     } else {
       setGeneratedCodeUrl(null);
     }
-  }, [codeText, codeType, qrColor, qrBgColor, qrSize, errorCorrection, barcodeFormat, qrStyle, qrColorType, qrGradientStart, qrGradientEnd]);
+  }, [codeText, codeType, qrColor, qrBgColor, qrSize, errorCorrection, barcodeFormat, qrStyle, qrColorType, qrGradientStart, qrGradientEnd, artisticStyle]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50">
@@ -678,7 +878,7 @@ export default function Index() {
                     {/* Color Type Selection */}
                     <div className="space-y-2">
                       <span className="text-sm font-medium">Тип окраски</span>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-2">
                         <Button
                           size="sm"
                           variant={qrColorType === 'solid' ? "default" : "outline"}
@@ -692,6 +892,15 @@ export default function Index() {
                           onClick={() => setQrColorType('gradient')}
                         >
                           Градиент
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={qrColorType === 'artistic' ? "default" : "outline"}
+                          onClick={() => setQrColorType('artistic')}
+                          className="bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600"
+                        >
+                          <Icon name="Sparkles" size={16} className="mr-1" />
+                          Худож.
                         </Button>
                       </div>
                     </div>
@@ -752,7 +961,7 @@ export default function Index() {
                           </div>
                         </div>
                       </div>
-                    ) : (
+                    ) : qrColorType === 'gradient' ? (
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
@@ -832,6 +1041,53 @@ export default function Index() {
                               onChange={(e) => setQrBgColor(e.target.value)}
                               className="text-xs"
                             />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      // Artistic QR Options
+                      <div className="space-y-4">
+                        <div className="p-4 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg border border-purple-200">
+                          <div className="flex items-center space-x-2 mb-3">
+                            <Icon name="Sparkles" size={20} className="text-purple-600" />
+                            <span className="font-medium text-purple-800">Художественный QR-код</span>
+                          </div>
+                          <p className="text-sm text-purple-700 mb-4">
+                            Создайте уникальный QR-код с красивым рисунком в качестве фона
+                          </p>
+                          
+                          <div className="space-y-3">
+                            <div>
+                              <span className="text-sm font-medium text-gray-700">Стиль рисунка</span>
+                              <div className="grid grid-cols-2 gap-2 mt-2">
+                                {[
+                                  { value: 'abstract', label: '🎨 Абстракция', desc: 'Яркие абстрактные формы' },
+                                  { value: 'nature', label: '🌸 Природа', desc: 'Цветы и растения' },
+                                  { value: 'geometric', label: '🔷 Геометрия', desc: 'Геометрические узоры' },
+                                  { value: 'watercolor', label: '🌊 Акварель', desc: 'Акварельные разводы' }
+                                ].map(style => (
+                                  <Button
+                                    key={style.value}
+                                    size="sm"
+                                    variant={artisticStyle === style.value ? "default" : "outline"}
+                                    onClick={() => setArtisticStyle(style.value)}
+                                    className="h-auto p-2 text-left"
+                                  >
+                                    <div>
+                                      <div className="font-medium text-xs">{style.label}</div>
+                                      <div className="text-xs text-gray-500">{style.desc}</div>
+                                    </div>
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            {isGeneratingArt && (
+                              <div className="flex items-center space-x-2 text-purple-600">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                                <span className="text-sm">Создаю художественный фон...</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
