@@ -770,11 +770,11 @@ export default function Index() {
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="text" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 min-h-[3rem] sm:h-auto p-1">
-                      <TabsTrigger value="text" className="text-xs sm:text-sm px-1 sm:px-3 py-2 min-h-[2.5rem] sm:h-auto flex-shrink-0">Текст</TabsTrigger>
-                      <TabsTrigger value="url" className="text-xs sm:text-sm px-1 sm:px-3 py-2 min-h-[2.5rem] sm:h-auto flex-shrink-0">URL</TabsTrigger>
-                      <TabsTrigger value="contact" className="text-xs sm:text-sm px-1 sm:px-3 py-2 min-h-[2.5rem] sm:h-auto flex-shrink-0 whitespace-nowrap overflow-hidden">Контакт</TabsTrigger>
-                      <TabsTrigger value="wifi" className="text-xs sm:text-sm px-1 sm:px-3 py-2 min-h-[2.5rem] sm:h-auto flex-shrink-0">WiFi</TabsTrigger>
+                    <TabsList className="grid w-full grid-cols-1 sm:grid-cols-4 gap-1 sm:gap-0 h-auto p-1">
+                      <TabsTrigger value="text" className="text-sm px-4 py-3 h-12 sm:h-auto w-full justify-center">Текст</TabsTrigger>
+                      <TabsTrigger value="url" className="text-sm px-4 py-3 h-12 sm:h-auto w-full justify-center">URL</TabsTrigger>
+                      <TabsTrigger value="contact" className="text-sm px-4 py-3 h-12 sm:h-auto w-full justify-center">Контакт</TabsTrigger>
+                      <TabsTrigger value="wifi" className="text-sm px-4 py-3 h-12 sm:h-auto w-full justify-center">WiFi</TabsTrigger>
                     </TabsList>
                     <TabsContent value="text">
                       <Textarea 
