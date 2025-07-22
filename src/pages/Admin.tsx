@@ -12,6 +12,7 @@ import Icon from '@/components/ui/icon';
 import ReviewsAdmin from '@/components/ReviewsAdmin';
 import TicketsAdmin from '@/components/TicketsAdmin';
 import Login from './Login';
+import { hashPassword } from '@/utils/security';
 
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -85,7 +86,8 @@ export default function Admin() {
       return;
     }
     
-    localStorage.setItem('admin_password', newPassword);
+    const hashedPassword = hashPassword(newPassword);
+    localStorage.setItem('admin_password_hash', hashedPassword);
     setNewPassword('');
     setConfirmPassword('');
     setShowPasswordDialog(false);
