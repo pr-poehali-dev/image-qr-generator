@@ -724,7 +724,7 @@ export default function Index() {
                           Batch-генерация
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-lg">
+                      <DialogContent className="w-[95vw] max-w-lg mx-2 sm:mx-auto">
                         <DialogHeader>
                           <DialogTitle>Массовая генерация кодов</DialogTitle>
                           <DialogDescription>
@@ -746,7 +746,7 @@ export default function Index() {
                             </div>
                           )}
                           
-                          <div className="flex space-x-2">
+                          <div className="flex flex-col sm:flex-row gap-2 sm:space-x-2">
                             <Button 
                               onClick={generateBatchCodes} 
                               disabled={!batchText.trim() || isGeneratingBatch}
@@ -866,7 +866,7 @@ export default function Index() {
                     <span>Продвинутые настройки дизайна</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4 sm:space-y-6">
                   
                   {/* Colors */}
                   <div className="space-y-3">
@@ -876,6 +876,7 @@ export default function Index() {
                       <div className="grid grid-cols-3 gap-2">
                         <Button
                           size="sm"
+                          className="h-12 sm:h-auto text-sm"
                           variant={qrColorType === 'solid' ? "default" : "outline"}
                           onClick={() => setQrColorType('solid')}
                         >
@@ -883,6 +884,7 @@ export default function Index() {
                         </Button>
                         <Button
                           size="sm"
+                          className="h-12 sm:h-auto text-sm"
                           variant={qrColorType === 'gradient' ? "default" : "outline"}
                           onClick={() => setQrColorType('gradient')}
                         >
@@ -890,6 +892,7 @@ export default function Index() {
                         </Button>
                         <Button
                           size="sm"
+                          className="h-12 sm:h-auto text-sm"
                           variant={qrColorType === 'artistic' ? "default" : "outline"}
                           onClick={() => setQrColorType('artistic')}
                           className="bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600"
@@ -901,7 +904,7 @@ export default function Index() {
                     </div>
 
                     {qrColorType === 'solid' ? (
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <span className="text-sm font-medium">Цвет кода</span>
                           <div className="flex items-center space-x-2">
@@ -917,11 +920,11 @@ export default function Index() {
                               className="text-xs"
                             />
                           </div>
-                          <div className="flex space-x-1">
+                          <div className="flex flex-wrap gap-1">
                             {['#000000', '#FF0000', '#0000FF', '#008000', '#800080'].map(color => (
                               <button
                                 key={color}
-                                className="w-6 h-6 rounded border"
+                                className="w-8 h-8 sm:w-6 sm:h-6 rounded border touch-manipulation"
                                 style={{ backgroundColor: color }}
                                 onClick={() => setQrColor(color)}
                               />
@@ -944,11 +947,11 @@ export default function Index() {
                               className="text-xs"
                             />
                           </div>
-                          <div className="flex space-x-1">
+                          <div className="flex flex-wrap gap-1">
                             {['#FFFFFF', '#F0F0F0', '#FFFF99', '#FFE4E1', '#E0E0FF'].map(color => (
                               <button
                                 key={color}
-                                className="w-6 h-6 rounded border"
+                                className="w-8 h-8 sm:w-6 sm:h-6 rounded border touch-manipulation"
                                 style={{ backgroundColor: color }}
                                 onClick={() => setQrBgColor(color)}
                               />
@@ -958,7 +961,7 @@ export default function Index() {
                       </div>
                     ) : qrColorType === 'gradient' ? (
                       <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <span className="text-sm font-medium">Начальный цвет</span>
                             <div className="flex items-center space-x-2">
@@ -966,7 +969,7 @@ export default function Index() {
                                 type="color"
                                 value={qrGradientStart}
                                 onChange={(e) => setQrGradientStart(e.target.value)}
-                                className="w-10 h-10 rounded border cursor-pointer"
+                                className="w-12 h-12 sm:w-10 sm:h-10 rounded border cursor-pointer touch-manipulation"
                               />
                               <Input 
                                 value={qrGradientStart} 
@@ -983,7 +986,7 @@ export default function Index() {
                                 type="color"
                                 value={qrGradientEnd}
                                 onChange={(e) => setQrGradientEnd(e.target.value)}
-                                className="w-10 h-10 rounded border cursor-pointer"
+                                className="w-12 h-12 sm:w-10 sm:h-10 rounded border cursor-pointer touch-manipulation"
                               />
                               <Input 
                                 value={qrGradientEnd} 
@@ -997,7 +1000,7 @@ export default function Index() {
                         {/* Gradient Presets */}
                         <div className="space-y-2">
                           <span className="text-sm font-medium">Готовые градиенты</span>
-                          <div className="grid grid-cols-4 gap-2">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {[
                               { name: 'Огонь', start: '#FF0000', end: '#FF8C00' },
                               { name: 'Океан', start: '#0000FF', end: '#00CED1' },
@@ -1006,7 +1009,7 @@ export default function Index() {
                             ].map(preset => (
                               <button
                                 key={preset.name}
-                                className="h-8 rounded border text-xs text-white font-medium"
+                                className="h-10 sm:h-8 rounded border text-sm sm:text-xs text-white font-medium px-2 truncate touch-manipulation"
                                 style={{ 
                                   background: `linear-gradient(45deg, ${preset.start}, ${preset.end})` 
                                 }}
@@ -1064,6 +1067,7 @@ export default function Index() {
                                   <Button
                                     key={style.value}
                                     size="sm"
+                          className="h-12 sm:h-auto text-sm"
                                     variant={artisticStyle === style.value ? "default" : "outline"}
                                     onClick={() => setArtisticStyle(style.value)}
                                     className="h-auto p-2 text-left"
@@ -1094,7 +1098,7 @@ export default function Index() {
                       {/* QR Style */}
                       <div className="space-y-2">
                         <span className="text-sm font-medium">Стиль модулей</span>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           {[
                             { id: 'square', name: 'Квадраты', icon: 'Square' },
                             { id: 'circle', name: 'Круги', icon: 'Circle' },
@@ -1348,7 +1352,7 @@ export default function Index() {
                   Оставить отзыв
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="w-[95vw] max-w-md mx-2 sm:mx-auto">
                 <DialogHeader>
                   <DialogTitle>Поделитесь своим мнением</DialogTitle>
                   <DialogDescription>
@@ -1363,10 +1367,10 @@ export default function Index() {
       </section>
 
       {/* Support Section */}
-      <section className="py-16 px-4 bg-gray-50">
+      <section className="py-8 sm:py-12 lg:py-16 px-4 bg-gray-50">
         <div className="container mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-4">Нужна помощь?</h2>
-          <p className="text-xl text-gray-600 mb-8">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-4">Нужна помощь?</h2>
+          <p className="text-lg sm:text-xl text-gray-600 mb-8">
             Наша служба поддержки готова помочь вам 24/7
           </p>
           <Dialog>
@@ -1376,7 +1380,7 @@ export default function Index() {
                 Обратиться в поддержку
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="w-[95vw] max-w-lg mx-2 sm:mx-auto">
               <DialogHeader>
                 <DialogTitle>Обращение в техподдержку</DialogTitle>
                 <DialogDescription>
