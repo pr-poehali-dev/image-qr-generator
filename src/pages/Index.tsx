@@ -357,35 +357,30 @@ export default function Index() {
                 ctx.fillStyle = qrColor;
               }
               
-              // Draw styled modules
-              const moduleSize = Math.ceil(size / 33); // Approximate module size
-              for (let y = 0; y < size; y += moduleSize) {
-                for (let x = 0; x < size; x += moduleSize) {
-                  // Check if this area should be dark
-                  let shouldFill = false;
-                  for (let dy = 0; dy < moduleSize && !shouldFill; dy++) {
-                    for (let dx = 0; dx < moduleSize && !shouldFill; dx++) {
-                      const pixelY = Math.min(y + dy, size - 1);
-                      const pixelX = Math.min(x + dx, size - 1);
-                      const pixel = (pixelY * size + pixelX) * 4;
-                      if (imageData.data[pixel] < 128) { // Dark pixel
-                        shouldFill = true;
+              // Draw styled modules with proper gradient handling
+              for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                  const pixel = (y * size + x) * 4;
+                  if (imageData.data[pixel] < 128) { // Dark pixel
+                    // Find module boundaries for this pixel
+                    const moduleX = Math.floor(x / 8) * 8; // Rough module size estimation
+                    const moduleY = Math.floor(y / 8) * 8;
+                    const moduleSize = 8;
+                    
+                    // Only draw if we're at the start of a module (avoid overdraw)
+                    if (x === moduleX && y === moduleY) {
+                      if (qrStyle === 'circle') {
+                        ctx.beginPath();
+                        ctx.arc(moduleX + moduleSize/2, moduleY + moduleSize/2, moduleSize/2 * 0.8, 0, Math.PI * 2);
+                        ctx.fill();
+                      } else if (qrStyle === 'rounded') {
+                        const radius = moduleSize * 0.3;
+                        ctx.beginPath();
+                        ctx.roundRect(moduleX + 1, moduleY + 1, moduleSize - 2, moduleSize - 2, radius);
+                        ctx.fill();
+                      } else {
+                        ctx.fillRect(moduleX, moduleY, moduleSize, moduleSize);
                       }
-                    }
-                  }
-                  
-                  if (shouldFill) {
-                    if (qrStyle === 'circle') {
-                      ctx.beginPath();
-                      ctx.arc(x + moduleSize/2, y + moduleSize/2, moduleSize/2 * 0.8, 0, Math.PI * 2);
-                      ctx.fill();
-                    } else if (qrStyle === 'rounded') {
-                      const radius = moduleSize * 0.3;
-                      ctx.beginPath();
-                      ctx.roundRect(x + 1, y + 1, moduleSize - 2, moduleSize - 2, radius);
-                      ctx.fill();
-                    } else {
-                      ctx.fillRect(x, y, moduleSize, moduleSize);
                     }
                   }
                 }
