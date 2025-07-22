@@ -771,10 +771,10 @@ export default function Index() {
                 <CardContent>
                   <Tabs defaultValue="text" className="w-full">
                     <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
-                      <TabsTrigger value="text">Текст</TabsTrigger>
-                      <TabsTrigger value="url">URL</TabsTrigger>
-                      <TabsTrigger value="contact">Контакт</TabsTrigger>
-                      <TabsTrigger value="wifi">WiFi</TabsTrigger>
+                      <TabsTrigger value="text" className="w-full">Текст</TabsTrigger>
+                      <TabsTrigger value="url" className="w-full">URL</TabsTrigger>
+                      <TabsTrigger value="contact" className="w-full">Контакт</TabsTrigger>
+                      <TabsTrigger value="wifi" className="w-full">WiFi</TabsTrigger>
                     </TabsList>
                     <TabsContent value="text">
                       <Textarea 
@@ -782,6 +782,7 @@ export default function Index() {
                         value={codeText}
                         onChange={(e) => setCodeText(e.target.value)}
                         rows={3}
+                        className="w-full"
                       />
                     </TabsContent>
                     <TabsContent value="url">
@@ -789,6 +790,7 @@ export default function Index() {
                         placeholder="https://example.com" 
                         value={codeText}
                         onChange={(e) => setCodeText(e.target.value)}
+                        className="w-full"
                       />
                     </TabsContent>
                     <TabsContent value="contact">
@@ -799,7 +801,8 @@ export default function Index() {
                           onChange={(e) => {
                             setContactName(e.target.value);
                             updateContactVCard(e.target.value, contactPhone, contactEmail);
-                          }} 
+                          }}
+                          className="w-full" 
                         />
                         <Input 
                           placeholder="Телефон" 
@@ -807,7 +810,8 @@ export default function Index() {
                           onChange={(e) => {
                             setContactPhone(e.target.value);
                             updateContactVCard(contactName, e.target.value, contactEmail);
-                          }} 
+                          }}
+                          className="w-full" 
                         />
                         <Input 
                           placeholder="Email" 
@@ -816,7 +820,8 @@ export default function Index() {
                           onChange={(e) => {
                             setContactEmail(e.target.value);
                             updateContactVCard(contactName, contactPhone, e.target.value);
-                          }} 
+                          }}
+                          className="w-full" 
                         />
                       </div>
                     </TabsContent>
@@ -828,7 +833,8 @@ export default function Index() {
                           onChange={(e) => {
                             setWifiSSID(e.target.value);
                             updateWifiString(e.target.value, wifiPassword, wifiSecurity);
-                          }} 
+                          }}
+                          className="w-full" 
                         />
                         <Input 
                           placeholder="Пароль WiFi" 
@@ -837,13 +843,14 @@ export default function Index() {
                           onChange={(e) => {
                             setWifiPassword(e.target.value);
                             updateWifiString(wifiSSID, e.target.value, wifiSecurity);
-                          }} 
+                          }}
+                          className="w-full" 
                         />
                         <Select value={wifiSecurity} onValueChange={(value) => {
                           setWifiSecurity(value);
                           updateWifiString(wifiSSID, wifiPassword, value);
                         }}>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Тип шифрования" />
                           </SelectTrigger>
                           <SelectContent>
