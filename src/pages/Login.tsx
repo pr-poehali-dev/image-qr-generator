@@ -25,7 +25,7 @@ export default function Login({ onLogin }: LoginProps) {
     const storedPassword = localStorage.getItem('admin_password_hash');
     if (!storedPassword) {
       // Устанавливаем пароль по умолчанию с хешированием
-      const defaultPassword = 'SecureAdmin2024!';
+      const defaultPassword = '12345678';
       const hashedPassword = hashPassword(defaultPassword);
       localStorage.setItem('admin_password_hash', hashedPassword);
     }
