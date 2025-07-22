@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Progress } from '@/components/ui/progress';
 import Icon from '@/components/ui/icon';
 import ReviewForm from '@/components/ReviewForm';
-import { useState, useEffect } from 'react';
 import SupportTicketForm from '@/components/SupportTicketForm';
 import AdRenderer from '@/components/AdRenderer';
 import QRCode from 'qrcode';
