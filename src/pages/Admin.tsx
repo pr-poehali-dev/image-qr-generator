@@ -29,17 +29,37 @@ export default function Admin() {
 
   // Проверка сессии при загрузке
   useEffect(() => {
-    const session = localStorage.getItem('admin_session');
-    if (session) {
-      const sessionTime = parseInt(session);
-      const currentTime = Date.now();
-      
-      if (currentTime - sessionTime < SESSION_DURATION) {
-        setIsAuthenticated(true);
-        // Устанавливаем таймер для автоматического выхода
-        const remainingTime = SESSION_DURATION - (currentTime - sessionTime);
-        setSessionTimeout(setTimeout(handleLogout, remainingTime));
-      } else {
+    const sessionData = localStorage.getItem('admin_session');
+    if (sessionData) {
+      try {
+        const session = JSON.parse(sessionData);
+        const currentTime = Date.now();
+        
+        // Проверяем валидность сессии
+        if (currentTime < session.expires) {
+          // Дополнительная проверка User Agent (защита от hijacking)
+          if (session.userAgent === navigator.userAgent) {
+            setIsAuthenticated(true);
+            
+            // Устанавливаем таймер для автоматического выхода
+            const remainingTime = session.expires - currentTime;
+            setSessionTimeout(setTimeout(handleLogout, remainingTime));
+            
+            // Обновляем время последней активности
+            session.lastActivity = currentTime;
+            localStorage.setItem('admin_session', JSON.stringify(session));
+          } else {
+            // Сессия скомпрометирована - принудительный выход
+            console.warn('Session hijacking attempt detected');
+            localStorage.removeItem('admin_session');
+            localStorage.removeItem('admin_block_data');
+          }
+        } else {
+          // Сессия истекла
+          localStorage.removeItem('admin_session');
+        }
+      } catch (e) {
+        // Поврежденные данные сессии
         localStorage.removeItem('admin_session');
       }
     }
@@ -72,6 +92,17 @@ export default function Admin() {
     setSessionTimeout(null);
   };
 
+  // Функция хеширования пароля (должна совпадать с Login.tsx)
+  function hashPassword(password: string): string {
+    let hash = 0;
+    for (let i = 0; i < password.length; i++) {
+      const char = password.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // 32bit integer
+    }
+    return Math.abs(hash).toString(36) + btoa(password).slice(-8);
+  }
+
   const handlePasswordChange = () => {
     setPasswordChangeError('');
     
@@ -85,7 +116,9 @@ export default function Admin() {
       return;
     }
     
-    localStorage.setItem('admin_password', newPassword);
+    // Сохраняем хеш нового пароля
+    const passwordHash = hashPassword(newPassword);
+    localStorage.setItem('admin_password_hash', passwordHash);
     setNewPassword('');
     setConfirmPassword('');
     setShowPasswordDialog(false);
