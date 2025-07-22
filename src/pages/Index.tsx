@@ -770,11 +770,11 @@ export default function Index() {
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="text" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
-                      <TabsTrigger value="text" className="w-full">Текст</TabsTrigger>
-                      <TabsTrigger value="url" className="w-full">URL</TabsTrigger>
-                      <TabsTrigger value="contact" className="w-full">Контакт</TabsTrigger>
-                      <TabsTrigger value="wifi" className="w-full">WiFi</TabsTrigger>
+                    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-12 sm:h-auto">
+                      <TabsTrigger value="text" className="text-xs sm:text-sm px-2 py-2 h-10 sm:h-auto">Текст</TabsTrigger>
+                      <TabsTrigger value="url" className="text-xs sm:text-sm px-2 py-2 h-10 sm:h-auto">URL</TabsTrigger>
+                      <TabsTrigger value="contact" className="text-xs sm:text-sm px-2 py-2 h-10 sm:h-auto">Контакт</TabsTrigger>
+                      <TabsTrigger value="wifi" className="text-xs sm:text-sm px-2 py-2 h-10 sm:h-auto">WiFi</TabsTrigger>
                     </TabsList>
                     <TabsContent value="text">
                       <Textarea 
@@ -880,10 +880,10 @@ export default function Index() {
                     {/* Color Type Selection */}
                     <div className="space-y-2">
                       <span className="text-sm font-medium">Тип окраски</span>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <Button
                           size="sm"
-                          className="h-12 sm:h-auto text-sm"
+                          className="h-12 text-sm w-full"
                           variant={qrColorType === 'solid' ? "default" : "outline"}
                           onClick={() => setQrColorType('solid')}
                         >
@@ -891,7 +891,7 @@ export default function Index() {
                         </Button>
                         <Button
                           size="sm"
-                          className="h-12 sm:h-auto text-sm"
+                          className="h-12 text-sm w-full"
                           variant={qrColorType === 'gradient' ? "default" : "outline"}
                           onClick={() => setQrColorType('gradient')}
                         >
@@ -899,13 +899,12 @@ export default function Index() {
                         </Button>
                         <Button
                           size="sm"
-                          className="h-12 sm:h-auto text-sm"
+                          className="h-12 text-sm w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600"
                           variant={qrColorType === 'artistic' ? "default" : "outline"}
                           onClick={() => setQrColorType('artistic')}
-                          className="bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600"
                         >
                           <Icon name="Sparkles" size={16} className="mr-1" />
-                          Худож.
+                          Художественный
                         </Button>
                       </div>
                     </div>
