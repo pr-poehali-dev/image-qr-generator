@@ -1233,14 +1233,7 @@ export default function Index() {
                 </CardContent>
               </Card>
 
-              {/* Ad Space - Sidebar */}
-              <Card>
-                <CardContent className="p-6">
-                  <div className="w-full h-64 flex items-center justify-center">
-                    <AdRenderer position="sidebar" className="w-full max-h-full" />
-                  </div>
-                </CardContent>
-              </Card>
+
 
               {/* Enhanced Features */}
               <Card>
