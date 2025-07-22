@@ -712,14 +712,14 @@ export default function Index() {
               {/* Content Input */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
+                  <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex items-center space-x-2">
                       <Icon name="Type" size={24} />
                       <span>Содержимое кода</span>
                     </div>
                     <Dialog open={showBatchDialog} onOpenChange={setShowBatchDialog}>
                       <DialogTrigger asChild>
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" className="w-full sm:w-auto">
                           <Icon name="Package" size={16} className="mr-2" />
                           Batch-генерация
                         </Button>
