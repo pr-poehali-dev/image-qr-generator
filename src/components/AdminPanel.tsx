@@ -74,74 +74,75 @@ export default function AdminPanel() {
   }, []);
 
   // Одобрить отзыв
-  const approveReview = (reviewId: string) => {
-    const pendingList = JSON.parse(localStorage.getItem('pending_reviews') || '[]');
-    const approvedList = JSON.parse(localStorage.getItem('approved_reviews') || '[]');
-    
-    const reviewIndex = pendingList.findIndex((r: Review) => r.id === reviewId);
-    if (reviewIndex !== -1) {
-      const review = { ...pendingList[reviewIndex], status: 'approved' };
-      pendingList.splice(reviewIndex, 1);
-      approvedList.push(review);
-      
-      localStorage.setItem('pending_reviews', JSON.stringify(pendingList));
-      localStorage.setItem('approved_reviews', JSON.stringify(approvedList));
-      
-      window.dispatchEvent(new Event('storage'));
+  const approveReview = async (reviewId: string) => {
+    try {
+      await reviewsApi.admin.approveReview(reviewId);
+      // Обновляем локальное состояние
+      const review = pendingReviews.find(r => r.id === reviewId);
+      if (review) {
+        setPendingReviews(prev => prev.filter(r => r.id !== reviewId));
+        setApprovedReviews(prev => [...prev, { ...review, status: 'approved' }]);
+      }
+    } catch (error) {
+      console.error('Ошибка одобрения отзыва:', error);
+      alert('Ошибка одобрения отзыва');
     }
   };
 
   // Отклонить отзыв
-  const rejectReview = (reviewId: string) => {
-    const pendingList = JSON.parse(localStorage.getItem('pending_reviews') || '[]');
-    const rejectedList = JSON.parse(localStorage.getItem('rejected_reviews') || '[]');
-    
-    const reviewIndex = pendingList.findIndex((r: Review) => r.id === reviewId);
-    if (reviewIndex !== -1) {
-      const review = { ...pendingList[reviewIndex], status: 'rejected' };
-      pendingList.splice(reviewIndex, 1);
-      rejectedList.push(review);
-      
-      localStorage.setItem('pending_reviews', JSON.stringify(pendingList));
-      localStorage.setItem('rejected_reviews', JSON.stringify(rejectedList));
-      
-      window.dispatchEvent(new Event('storage'));
+  const rejectReview = async (reviewId: string) => {
+    try {
+      await reviewsApi.admin.rejectReview(reviewId);
+      // Обновляем локальное состояние
+      const review = pendingReviews.find(r => r.id === reviewId);
+      if (review) {
+        setPendingReviews(prev => prev.filter(r => r.id !== reviewId));
+        setRejectedReviews(prev => [...prev, { ...review, status: 'rejected' }]);
+      }
+    } catch (error) {
+      console.error('Ошибка отклонения отзыва:', error);
+      alert('Ошибка отклонения отзыва');
     }
   };
 
   // Добавить ответ админа
-  const addAdminReply = (reviewId: string) => {
+  const addAdminReply = async (reviewId: string) => {
     const reply = replyText[reviewId];
     if (!reply?.trim()) return;
 
-    const approvedList = JSON.parse(localStorage.getItem('approved_reviews') || '[]');
-    const reviewIndex = approvedList.findIndex((r: Review) => r.id === reviewId);
-    
-    if (reviewIndex !== -1) {
-      approvedList[reviewIndex] = {
-        ...approvedList[reviewIndex],
-        adminReply: reply,
-        adminReplyDate: new Date().toISOString()
-      };
-      
-      localStorage.setItem('approved_reviews', JSON.stringify(approvedList));
-      setReplyText(prev => ({ ...prev, [reviewId]: '' }));
-      
-      window.dispatchEvent(new Event('storage'));
+    try {
+      await reviewsApi.admin.addReply(reviewId, reply);
+      // Обновляем локальное состояние
+      setApprovedReviews(prev => 
+        prev.map(review => 
+          review.id === reviewId 
+            ? { ...review, adminReply: reply, adminReplyDate: new Date().toISOString() }
+            : review
+        )
+      );
+      // Очищаем поле ввода
+      setReplyText({ ...replyText, [reviewId]: '' });
+    } catch (error) {
+      console.error('Ошибка добавления ответа:', error);
+      alert('Ошибка добавления ответа');
     }
   };
 
-  // Удалить ответ админа
-  const removeAdminReply = (reviewId: string) => {
-    const approvedList = JSON.parse(localStorage.getItem('approved_reviews') || '[]');
-    const reviewIndex = approvedList.findIndex((r: Review) => r.id === reviewId);
-    
-    if (reviewIndex !== -1) {
-      delete approvedList[reviewIndex].adminReply;
-      delete approvedList[reviewIndex].adminReplyDate;
-      
-      localStorage.setItem('approved_reviews', JSON.stringify(approvedList));
-      window.dispatchEvent(new Event('storage'));
+  // Удалить ответ админа  
+  const removeAdminReply = async (reviewId: string) => {
+    try {
+      await reviewsApi.admin.addReply(reviewId, ''); // Очищаем ответ
+      // Обновляем локальное состояние
+      setApprovedReviews(prev => 
+        prev.map(review => 
+          review.id === reviewId 
+            ? { ...review, adminReply: undefined, adminReplyDate: undefined }
+            : review
+        )
+      );
+    } catch (error) {
+      console.error('Ошибка удаления ответа:', error);
+      alert('Ошибка удаления ответа');
     }
   };
 
@@ -253,6 +254,7 @@ export default function AdminPanel() {
               onClick={() => approveReview(review.id)}
               size="sm"
               className="bg-green-600 hover:bg-green-700"
+              disabled={isLoading}
             >
               <Icon name="Check" size={14} className="mr-1" />
               Одобрить
@@ -261,6 +263,7 @@ export default function AdminPanel() {
               onClick={() => rejectReview(review.id)}
               size="sm"
               variant="destructive"
+              disabled={isLoading}
             >
               <Icon name="X" size={14} className="mr-1" />
               Отклонить
