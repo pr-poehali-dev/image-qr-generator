@@ -24,8 +24,8 @@ export default function ReviewForm() {
 
     setIsSubmitting(true);
 
-    // Отправляем отзыв на модерацию
-    const pendingReviews = JSON.parse(localStorage.getItem('pending_reviews') || '[]');
+    // Сохранение отзыва в localStorage для демонстрации
+    const reviews = JSON.parse(localStorage.getItem('pending_reviews') || '[]');
     const newReview = {
       id: Date.now().toString(),
       name,
@@ -36,11 +36,8 @@ export default function ReviewForm() {
       status: 'pending'
     };
     
-    pendingReviews.push(newReview);
-    localStorage.setItem('pending_reviews', JSON.stringify(pendingReviews));
-    
-    // Триггерим событие storage для обновления админ-панели
-    window.dispatchEvent(new Event('storage'));
+    reviews.push(newReview);
+    localStorage.setItem('pending_reviews', JSON.stringify(reviews));
 
     setTimeout(() => {
       setIsSubmitting(false);
@@ -61,7 +58,7 @@ export default function ReviewForm() {
         </div>
         <h3 className="text-lg font-bold mb-2">Спасибо за отзыв!</h3>
         <p className="text-gray-600">
-          Ваш отзыв отправлен на модерацию. Он появится на сайте после проверки администратором.
+          Ваш отзыв отправлен на модерацию и появится на сайте после проверки.
         </p>
       </div>
     );
@@ -119,7 +116,7 @@ export default function ReviewForm() {
       </div>
 
       <Alert>
-        <Icon name="Clock" size={16} />
+        <Icon name="Info" size={16} />
         <AlertDescription className="text-sm">
           Все отзывы проходят модерацию. Мы публикуем только честные и конструктивные отзывы.
         </AlertDescription>

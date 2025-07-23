@@ -44,94 +44,20 @@ export default function Index() {
   const [barcodeFormat, setBarcodeFormat] = useState('CODE128');
   const [generatedCodeUrl, setGeneratedCodeUrl] = useState<string | null>(null);
   const [approvedReviews, setApprovedReviews] = useState<any[]>([]);
-  const [showAllReviews, setShowAllReviews] = useState(false);
 
-  // Загрузка только одобренных отзывов
+  // Load approved reviews
   useEffect(() => {
     const loadApprovedReviews = () => {
-      let approved = JSON.parse(localStorage.getItem('approved_reviews') || '[]');
-      
-      // Добавляем демо-отзывы, если их нет
-      if (approved.length === 0) {
-        const demoReviews = [
-          {
-            id: 'demo1',
-            name: 'Анна Смирнова',
-            rating: 5,
-            comment: 'Отличный сервис! Быстро сгенерировал QR-коды для нашего ресторана. Все клиенты теперь легко сканируют меню.',
-            date: new Date(Date.now() - 3600000).toISOString(),
-            status: 'approved'
-          },
-          {
-            id: 'demo2',
-            name: 'Михаил К.',
-            rating: 4,
-            comment: 'Удобно и функционально. Особенно понравилась возможность создания штрих-кодов разных форматов.',
-            date: new Date(Date.now() - 7200000).toISOString(),
-            status: 'approved'
-          },
-          {
-            id: 'demo3',
-            name: 'Елена Васильева',
-            rating: 5,
-            comment: 'Прекрасный инструмент для работы! Создала коды для всех товаров в магазине за полчаса.',
-            date: new Date(Date.now() - 10800000).toISOString(),
-            status: 'approved'
-          },
-          {
-            id: 'demo4',
-            name: 'Дмитрий П.',
-            rating: 5,
-            comment: 'Потрясающий генератор! Использую для своего интернет-магазина. Клиенты очень довольны.',
-            date: new Date(Date.now() - 14400000).toISOString(),
-            status: 'approved',
-            adminReply: 'Спасибо за отзыв! Мы рады, что наш сервис помогает вашему бизнесу!',
-            adminReplyDate: new Date(Date.now() - 14000000).toISOString()
-          },
-          {
-            id: 'demo5',
-            name: 'Ольга Ковалева',
-            rating: 4,
-            comment: 'Очень удобно и функционально. Особенно нравятся возможности настройки дизайна.',
-            date: new Date(Date.now() - 18000000).toISOString(),
-            status: 'approved'
-          },
-          {
-            id: 'demo6',
-            name: 'Александр Н.',
-            rating: 5,
-            comment: 'Лучший генератор QR-кодов, которым я пользовался! Много форматов и отличное качество.',
-            date: new Date(Date.now() - 21600000).toISOString(),
-            status: 'approved'
-          },
-          {
-            id: 'demo7',
-            name: 'Мария С.',
-            rating: 5,
-            comment: 'Пользуюсь уже месяц - очень довольна! Интуитивно понятный интерфейс.',
-            date: new Date(Date.now() - 25200000).toISOString(),
-            status: 'approved'
-          }
-        ];
-        approved = demoReviews;
-        localStorage.setItem('approved_reviews', JSON.stringify(demoReviews));
-      }
-      
-      // Сортируем по дате (новые сверху)
-      approved.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      
+      const approved = JSON.parse(localStorage.getItem('approved_reviews') || '[]');
       setApprovedReviews(approved);
     };
 
     loadApprovedReviews();
-    
-    // Обновляем отзывы при изменениях в localStorage
+    // Listen for storage changes to update reviews in real-time
     const handleStorageChange = () => loadApprovedReviews();
     window.addEventListener('storage', handleStorageChange);
     
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
   const [batchText, setBatchText] = useState('');
@@ -1377,96 +1303,45 @@ export default function Index() {
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4">Отзывы пользователей</h2>
-            <p className="text-xl text-gray-600 mb-2">Что говорят о нашем сервисе</p>
-            <div className="flex items-center justify-center space-x-2 text-sm">
-              <div className="flex items-center text-green-600">
-                <Icon name="Shield" size={14} className="mr-1" />
-                Проверенные отзывы
-              </div>
-              <span className="text-gray-400">•</span>
-              <span className="text-purple-600">Модерация качества</span>
-            </div>
+            <p className="text-xl text-gray-600">Что говорят о нашем сервисе</p>
           </div>
           
           {approvedReviews.length > 0 ? (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-                {(showAllReviews ? approvedReviews : approvedReviews.slice(0, 5)).map((review) => {
-                  const colors = ['bg-purple-500', 'bg-blue-500', 'bg-green-500', 'bg-orange-500', 'bg-pink-500', 'bg-indigo-500'];
-                  const colorClass = colors[Math.floor(Math.random() * colors.length)];
-                  const initial = review.name.charAt(0).toUpperCase();
-                  const timeAgo = new Date(review.date).toLocaleDateString('ru-RU');
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+              {approvedReviews.map((review) => {
+                const colors = ['bg-purple-500', 'bg-blue-500', 'bg-green-500', 'bg-orange-500', 'bg-pink-500', 'bg-indigo-500'];
+                const colorClass = colors[Math.floor(Math.random() * colors.length)];
+                const initial = review.name.charAt(0).toUpperCase();
+                const timeAgo = new Date(review.date).toLocaleDateString('ru-RU');
 
-                  return (
-                    <Card key={review.id} className="hover:shadow-lg transition-shadow">
-                      <CardContent className="p-4 sm:p-6">
-                        <div className="flex items-center mb-4">
-                          <div className={`w-12 h-12 ${colorClass} rounded-full flex items-center justify-center text-white font-bold`}>
-                            {initial}
-                          </div>
-                          <div className="ml-3 flex-1">
-                            <div className="font-medium">{review.name}</div>
-                            <div className="flex text-yellow-400">
-                              {[...Array(review.rating)].map((_, i) => (
-                                <Icon key={i} name="Star" size={16} className="fill-current" />
-                              ))}
-                              {[...Array(5 - review.rating)].map((_, i) => (
-                                <Icon key={i} name="Star" size={16} />
-                              ))}
-                            </div>
+                return (
+                  <Card key={review.id} className="hover:shadow-lg transition-shadow">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex items-center mb-4">
+                        <div className={`w-12 h-12 ${colorClass} rounded-full flex items-center justify-center text-white font-bold`}>
+                          {initial}
+                        </div>
+                        <div className="ml-3">
+                          <div className="font-medium">{review.name}</div>
+                          <div className="flex text-yellow-400">
+                            {[...Array(review.rating)].map((_, i) => (
+                              <Icon key={i} name="Star" size={16} className="fill-current" />
+                            ))}
+                            {[...Array(5 - review.rating)].map((_, i) => (
+                              <Icon key={i} name="Star" size={16} />
+                            ))}
                           </div>
                         </div>
-                        <p className="text-gray-600 mb-3">
-                          "{review.comment}"
-                        </p>
-                        
-                        {/* Ответ админа */}
-                        {review.adminReply && (
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <Icon name="User" size={14} className="text-blue-600" />
-                              <span className="text-sm font-medium text-blue-700">Ответ администратора</span>
-                            </div>
-                            <p className="text-sm text-gray-700">{review.adminReply}</p>
-                            {review.adminReplyDate && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                {new Date(review.adminReplyDate).toLocaleDateString('ru-RU')}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                        
-                        <div className="text-sm text-gray-400">{timeAgo}</div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-              
-              {/* Кнопка "Показать все" */}
-              {approvedReviews.length > 5 && (
-                <div className="text-center mb-12">
-                  <Button 
-                    variant="outline" 
-                    size="lg"
-                    onClick={() => setShowAllReviews(!showAllReviews)}
-                    className="hover:bg-purple-50 border-purple-200"
-                  >
-                    {showAllReviews ? (
-                      <>
-                        <Icon name="ChevronUp" size={20} className="mr-2" />
-                        Скрыть отзывы
-                      </>
-                    ) : (
-                      <>
-                        <Icon name="ChevronDown" size={20} className="mr-2" />
-                        Показать все {approvedReviews.length} отзывов
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
-            </>
+                      </div>
+                      <p className="text-gray-600">
+                        "{review.comment}"
+                      </p>
+                      <div className="text-sm text-gray-400 mt-3">{timeAgo}</div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           ) : (
             <div className="text-center py-12">
               <Icon name="MessageCircle" size={48} className="text-gray-300 mx-auto mb-4" />
