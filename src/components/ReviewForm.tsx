@@ -5,13 +5,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import Icon from '@/components/ui/icon';
-import { reviewsApi } from '@/services/reviewsApi';
 
-interface ReviewFormProps {
-  onReviewSubmitted?: () => void;
-}
-
-export default function ReviewForm({ onReviewSubmitted }: ReviewFormProps) {
+export default function ReviewForm() {
   const [name, setName] = useState('');
   const [rating, setRating] = useState('5');
   const [comment, setComment] = useState('');
@@ -29,14 +24,22 @@ export default function ReviewForm({ onReviewSubmitted }: ReviewFormProps) {
 
     setIsSubmitting(true);
 
-    try {
-      // Отправляем отзыв через API
-      await reviewsApi.submitReview({
-        name,
-        rating: parseInt(rating),
-        comment
-      });
-      
+    // Сохранение отзыва в localStorage для демонстрации
+    const reviews = JSON.parse(localStorage.getItem('pending_reviews') || '[]');
+    const newReview = {
+      id: Date.now().toString(),
+      name,
+      rating: parseInt(rating),
+      comment,
+      email,
+      date: new Date().toISOString(),
+      status: 'pending'
+    };
+    
+    reviews.push(newReview);
+    localStorage.setItem('pending_reviews', JSON.stringify(reviews));
+
+    setTimeout(() => {
       setIsSubmitting(false);
       setSubmitted(true);
       
@@ -44,24 +47,7 @@ export default function ReviewForm({ onReviewSubmitted }: ReviewFormProps) {
       if (window.ym) {
         window.ym(localStorage.getItem('yandex_metrica_id'), 'reachGoal', 'review_submitted');
       }
-      
-      // Уведомляем родительский компонент
-      onReviewSubmitted?.();
-      
-      // Очищаем форму через 3 секунды
-      setTimeout(() => {
-        setName('');
-        setComment('');
-        setEmail('');
-        setRating('5');
-        setSubmitted(false);
-      }, 3000);
-      
-    } catch (error) {
-      console.error('Ошибка отправки отзыва:', error);
-      setIsSubmitting(false);
-      alert('Ошибка отправки отзыва. Попробуйте позже.');
-    }
+    }, 1000);
   };
 
   if (submitted) {
