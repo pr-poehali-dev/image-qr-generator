@@ -24,26 +24,34 @@ export default function AdminPanel() {
   const [pendingReviews, setPendingReviews] = useState<Review[]>([]);
   const [approvedReviews, setApprovedReviews] = useState<Review[]>([]);
   const [rejectedReviews, setRejectedReviews] = useState<Review[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [replyText, setReplyText] = useState<{[key: string]: string}>({});
   const [adminPassword, setAdminPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Загружаем отзывы (только пользовательские, без демо)
+  // Загружаем отзывы через API
   useEffect(() => {
-    const loadReviews = () => {
-      const pending = JSON.parse(localStorage.getItem('pending_reviews') || '[]');
-      // Только пользовательские одобренные отзывы (без постоянных демо)
-      const approved = JSON.parse(localStorage.getItem('approved_reviews') || '[]')
-        .filter((review: Review) => !review.id.startsWith('permanent-demo'));
-      const rejected = JSON.parse(localStorage.getItem('rejected_reviews') || '[]');
+    const loadReviews = async () => {
+      try {
+        setIsLoading(true);
+        const [pending, approved, rejected] = await Promise.all([
+          reviewsApi.admin.getPendingReviews(),
+          reviewsApi.admin.getApprovedReviews(), // Пользовательские одобренные
+          reviewsApi.admin.getRejectedReviews()
+        ]);
 
-      setPendingReviews(pending);
-      setApprovedReviews(approved);
-      setRejectedReviews(rejected);
+        setPendingReviews(pending);
+        setApprovedReviews(approved);
+        setRejectedReviews(rejected);
+      } catch (error) {
+        console.error('Ошибка загрузки отзывов:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     loadReviews();
-    const interval = setInterval(loadReviews, 1000);
+    const interval = setInterval(loadReviews, 5000); // Обновляем каждые 5 секунд
     
     return () => clearInterval(interval);
   }, []);

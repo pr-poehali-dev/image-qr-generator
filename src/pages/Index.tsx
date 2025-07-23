@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Progress } from '@/components/ui/progress';
 import Icon from '@/components/ui/icon';
 import ReviewForm from '@/components/ReviewForm';
+import ReviewsSection from '@/components/ReviewsSection';
 import SupportTicketForm from '@/components/SupportTicketForm';
 import AdRenderer from '@/components/AdRenderer';
 import QRCode from 'qrcode';
@@ -43,7 +44,7 @@ export default function Index() {
   const [wifiSecurity, setWifiSecurity] = useState('WPA');
   const [barcodeFormat, setBarcodeFormat] = useState('CODE128');
   const [generatedCodeUrl, setGeneratedCodeUrl] = useState<string | null>(null);
-  const [approvedReviews, setApprovedReviews] = useState<any[]>([]);
+
 
 
   const [showBatchDialog, setShowBatchDialog] = useState(false);
@@ -1293,54 +1294,14 @@ export default function Index() {
             <p className="text-xl text-gray-600">Что говорят о нашем сервисе</p>
           </div>
           
-          {approvedReviews.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-              {approvedReviews.map((review) => {
-                const colors = ['bg-purple-500', 'bg-blue-500', 'bg-green-500', 'bg-orange-500', 'bg-pink-500', 'bg-indigo-500'];
-                const colorClass = colors[Math.floor(Math.random() * colors.length)];
-                const initial = review.name.charAt(0).toUpperCase();
-                const timeAgo = new Date(review.date).toLocaleDateString('ru-RU');
-
-                return (
-                  <Card key={review.id} className="hover:shadow-lg transition-shadow">
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="flex items-center mb-4">
-                        <div className={`w-12 h-12 ${colorClass} rounded-full flex items-center justify-center text-white font-bold`}>
-                          {initial}
-                        </div>
-                        <div className="ml-3">
-                          <div className="font-medium">{review.name}</div>
-                          <div className="flex text-yellow-400">
-                            {[...Array(review.rating)].map((_, i) => (
-                              <Icon key={i} name="Star" size={16} className="fill-current" />
-                            ))}
-                            {[...Array(5 - review.rating)].map((_, i) => (
-                              <Icon key={i} name="Star" size={16} />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-gray-600">
-                        "{review.comment}"
-                      </p>
-                      <div className="text-sm text-gray-400 mt-3">{timeAgo}</div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <Icon name="MessageCircle" size={48} className="text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">Пока нет отзывов</p>
-              <p className="text-gray-400">Будьте первым, кто поделится мнением о нашем сервисе!</p>
-            </div>
-          )}
+          <div className="max-w-4xl mx-auto mb-12">
+            <ReviewsSection />
+          </div>
 
           <div className="text-center">
             <Dialog>
               <DialogTrigger asChild>
-                <Button size="lg" variant="outline">
+                <Button size="lg" className="gradient-bg">
                   <Icon name="MessageCircle" size={20} className="mr-2" />
                   Оставить отзыв
                 </Button>
