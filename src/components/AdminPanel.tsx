@@ -28,11 +28,13 @@ export default function AdminPanel() {
   const [adminPassword, setAdminPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Загружаем отзывы
+  // Загружаем отзывы (только пользовательские, без демо)
   useEffect(() => {
     const loadReviews = () => {
       const pending = JSON.parse(localStorage.getItem('pending_reviews') || '[]');
-      const approved = JSON.parse(localStorage.getItem('approved_reviews') || '[]');
+      // Только пользовательские одобренные отзывы (без постоянных демо)
+      const approved = JSON.parse(localStorage.getItem('approved_reviews') || '[]')
+        .filter((review: Review) => !review.id.startsWith('permanent-demo'));
       const rejected = JSON.parse(localStorage.getItem('rejected_reviews') || '[]');
 
       setPendingReviews(pending);

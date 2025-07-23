@@ -45,20 +45,7 @@ export default function Index() {
   const [generatedCodeUrl, setGeneratedCodeUrl] = useState<string | null>(null);
   const [approvedReviews, setApprovedReviews] = useState<any[]>([]);
 
-  // Load approved reviews
-  useEffect(() => {
-    const loadApprovedReviews = () => {
-      const approved = JSON.parse(localStorage.getItem('approved_reviews') || '[]');
-      setApprovedReviews(approved);
-    };
 
-    loadApprovedReviews();
-    // Listen for storage changes to update reviews in real-time
-    const handleStorageChange = () => loadApprovedReviews();
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
   const [batchText, setBatchText] = useState('');
   const [batchProgress, setBatchProgress] = useState(0);
