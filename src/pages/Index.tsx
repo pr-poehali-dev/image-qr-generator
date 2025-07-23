@@ -43,21 +43,70 @@ export default function Index() {
   const [wifiSecurity, setWifiSecurity] = useState('WPA');
   const [barcodeFormat, setBarcodeFormat] = useState('CODE128');
   const [generatedCodeUrl, setGeneratedCodeUrl] = useState<string | null>(null);
-  const [approvedReviews, setApprovedReviews] = useState<any[]>([]);
+  const [allReviews, setAllReviews] = useState<any[]>([]);
 
-  // Load approved reviews
+  // Load all reviews (approved + pending) in real-time
   useEffect(() => {
-    const loadApprovedReviews = () => {
-      const approved = JSON.parse(localStorage.getItem('approved_reviews') || '[]');
-      setApprovedReviews(approved);
+    const loadAllReviews = () => {
+      // Получаем утвержденные отзывы
+      let approved = JSON.parse(localStorage.getItem('approved_reviews') || '[]');
+      
+      // Добавляем демо-отзывы, если их нет
+      if (approved.length === 0) {
+        const demoReviews = [
+          {
+            id: 'demo1',
+            name: 'Анна Смирнова',
+            rating: 5,
+            comment: 'Отличный сервис! Быстро сгенерировал QR-коды для нашего ресторана. Все клиенты теперь легко сканируют меню.',
+            date: new Date(Date.now() - 3600000).toISOString(), // 1 час назад
+            status: 'approved'
+          },
+          {
+            id: 'demo2',
+            name: 'Михаил К.',
+            rating: 4,
+            comment: 'Удобно и функционально. Особенно понравилась возможность создания штрих-кодов разных форматов.',
+            date: new Date(Date.now() - 7200000).toISOString(), // 2 часа назад
+            status: 'approved'
+          },
+          {
+            id: 'demo3',
+            name: 'Елена Васильева',
+            rating: 5,
+            comment: 'Прекрасный инструмент для работы! Создала коды для всех товаров в магазине за полчаса.',
+            date: new Date(Date.now() - 10800000).toISOString(), // 3 часа назад
+            status: 'approved'
+          }
+        ];
+        approved = demoReviews;
+        localStorage.setItem('approved_reviews', JSON.stringify(demoReviews));
+      }
+      
+      // Получаем ожидающие модерации отзывы
+      const pending = JSON.parse(localStorage.getItem('pending_reviews') || '[]');
+      
+      // Объединяем все отзывы и сортируем по дате (новые сверху)
+      const combined = [...approved, ...pending].sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      
+      setAllReviews(combined);
     };
 
-    loadApprovedReviews();
+    loadAllReviews();
+    
+    // Обновляем отзывы каждую секунду для real-time эффекта
+    const interval = setInterval(loadAllReviews, 1000);
+    
     // Listen for storage changes to update reviews in real-time
-    const handleStorageChange = () => loadApprovedReviews();
+    const handleStorageChange = () => loadAllReviews();
     window.addEventListener('storage', handleStorageChange);
     
-    return () => window.removeEventListener('storage', handleStorageChange);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
   const [batchText, setBatchText] = useState('');
@@ -1303,26 +1352,53 @@ export default function Index() {
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4">Отзывы пользователей</h2>
-            <p className="text-xl text-gray-600">Что говорят о нашем сервисе</p>
+            <p className="text-xl text-gray-600 mb-2">Что говорят о нашем сервисе</p>
+            <div className="flex items-center justify-center space-x-2 text-sm">
+              <div className="flex items-center text-green-600">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></div>
+                Отзывы в реальном времени
+              </div>
+              <span className="text-gray-400">•</span>
+              <span className="text-purple-600">Мгновенная публикация</span>
+            </div>
           </div>
           
-          {approvedReviews.length > 0 ? (
+          {allReviews.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-              {approvedReviews.map((review) => {
+              {allReviews.map((review) => {
                 const colors = ['bg-purple-500', 'bg-blue-500', 'bg-green-500', 'bg-orange-500', 'bg-pink-500', 'bg-indigo-500'];
                 const colorClass = colors[Math.floor(Math.random() * colors.length)];
                 const initial = review.name.charAt(0).toUpperCase();
                 const timeAgo = new Date(review.date).toLocaleDateString('ru-RU');
 
+                const isPending = review.status === 'pending';
+
                 return (
-                  <Card key={review.id} className="hover:shadow-lg transition-shadow">
+                  <Card 
+                    key={review.id} 
+                    className={`hover:shadow-lg transition-all duration-300 ${
+                      isPending ? 'border-orange-200 bg-orange-50/30' : 'hover:shadow-lg'
+                    }`}
+                  >
                     <CardContent className="p-4 sm:p-6">
                       <div className="flex items-center mb-4">
-                        <div className={`w-12 h-12 ${colorClass} rounded-full flex items-center justify-center text-white font-bold`}>
+                        <div className={`w-12 h-12 ${colorClass} rounded-full flex items-center justify-center text-white font-bold relative`}>
                           {initial}
+                          {isPending && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
+                              <Icon name="Clock" size={10} className="text-white" />
+                            </div>
+                          )}
                         </div>
-                        <div className="ml-3">
-                          <div className="font-medium">{review.name}</div>
+                        <div className="ml-3 flex-1">
+                          <div className="flex items-center justify-between">
+                            <div className="font-medium">{review.name}</div>
+                            {isPending && (
+                              <Badge variant="outline" className="text-xs bg-orange-100 text-orange-700 border-orange-300">
+                                На модерации
+                              </Badge>
+                            )}
+                          </div>
                           <div className="flex text-yellow-400">
                             {[...Array(review.rating)].map((_, i) => (
                               <Icon key={i} name="Star" size={16} className="fill-current" />
@@ -1333,10 +1409,18 @@ export default function Index() {
                           </div>
                         </div>
                       </div>
-                      <p className="text-gray-600">
+                      <p className={`text-gray-600 ${isPending ? 'opacity-80' : ''}`}>
                         "{review.comment}"
                       </p>
-                      <div className="text-sm text-gray-400 mt-3">{timeAgo}</div>
+                      <div className="flex items-center justify-between mt-3">
+                        <div className="text-sm text-gray-400">{timeAgo}</div>
+                        {isPending && (
+                          <div className="text-xs text-orange-600 flex items-center">
+                            <Icon name="Clock" size={12} className="mr-1" />
+                            Ожидает проверки
+                          </div>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -1347,6 +1431,7 @@ export default function Index() {
               <Icon name="MessageCircle" size={48} className="text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500 text-lg">Пока нет отзывов</p>
               <p className="text-gray-400">Будьте первым, кто поделится мнением о нашем сервисе!</p>
+              <p className="text-sm text-purple-600 mt-2">✨ Все отзывы отображаются в реальном времени</p>
             </div>
           )}
 

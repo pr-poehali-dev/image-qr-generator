@@ -24,8 +24,8 @@ export default function ReviewForm() {
 
     setIsSubmitting(true);
 
-    // Сохранение отзыва в localStorage для демонстрации
-    const reviews = JSON.parse(localStorage.getItem('pending_reviews') || '[]');
+    // Мгновенное сохранение отзыва как опубликованного для реального времени
+    const reviews = JSON.parse(localStorage.getItem('approved_reviews') || '[]');
     const newReview = {
       id: Date.now().toString(),
       name,
@@ -33,11 +33,19 @@ export default function ReviewForm() {
       comment,
       email,
       date: new Date().toISOString(),
-      status: 'pending'
+      status: 'approved' // Сразу показываем как опубликованный
     };
     
     reviews.push(newReview);
-    localStorage.setItem('pending_reviews', JSON.stringify(reviews));
+    localStorage.setItem('approved_reviews', JSON.stringify(reviews));
+    
+    // Также сохраняем в pending для админки (если она есть)
+    const pendingReviews = JSON.parse(localStorage.getItem('pending_reviews') || '[]');
+    pendingReviews.push({...newReview, status: 'pending'});
+    localStorage.setItem('pending_reviews', JSON.stringify(pendingReviews));
+    
+    // Триггерим событие storage для обновления отзывов на других вкладках
+    window.dispatchEvent(new Event('storage'));
 
     setTimeout(() => {
       setIsSubmitting(false);
@@ -58,7 +66,7 @@ export default function ReviewForm() {
         </div>
         <h3 className="text-lg font-bold mb-2">Спасибо за отзыв!</h3>
         <p className="text-gray-600">
-          Ваш отзыв отправлен на модерацию и появится на сайте после проверки.
+          Ваш отзыв опубликован! Спасибо за вашу оценку нашего сервиса.
         </p>
       </div>
     );
@@ -116,9 +124,9 @@ export default function ReviewForm() {
       </div>
 
       <Alert>
-        <Icon name="Info" size={16} />
+        <Icon name="Zap" size={16} />
         <AlertDescription className="text-sm">
-          Все отзывы проходят модерацию. Мы публикуем только честные и конструктивные отзывы.
+          ⚡ Ваш отзыв будет опубликован мгновенно и отобразится в реальном времени!
         </AlertDescription>
       </Alert>
 
