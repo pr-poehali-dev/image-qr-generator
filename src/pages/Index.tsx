@@ -1434,6 +1434,7 @@ export default function Index() {
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
             <p>&copy; 2024 AI Code Generator Pro. Все права защищены.</p>
+            <a href="/admin" className="text-xs text-gray-600 hover:text-gray-400 opacity-50 mt-2 inline-block">•</a>
           </div>
         </div>
       </footer>
